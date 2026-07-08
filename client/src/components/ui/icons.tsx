@@ -1,3 +1,5 @@
+import { useId } from 'react';
+
 interface IconProps {
   className?: string;
 }
@@ -54,10 +56,46 @@ export const CheckInIcon = ({ className = 'w-5 h-5' }: IconProps) => (
   </svg>
 );
 
-export const LogoMark = ({ className = 'w-9 h-9' }: IconProps) => (
-  <span
-    className={`${className} inline-flex items-center justify-center rounded-xl bg-gradient-to-br from-brand-600 to-violet-glow text-white shadow-soft`}
-  >
-    <PlaneIcon className="w-[55%] h-[55%] -rotate-45 translate-x-px" />
-  </span>
-);
+/**
+ * VertixFlights brand mark: a "V" chevron cut by a rising contrail
+ * with a plane at its tip, on a brand-gradient tile.
+ */
+export const LogoMark = ({ className = 'w-9 h-9' }: IconProps) => {
+  const id = useId();
+  return (
+    <svg viewBox="0 0 32 32" className={`${className} shrink-0 drop-shadow-sm`} aria-hidden>
+      <defs>
+        <linearGradient id={id} x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stopColor="#2563eb" />
+          <stop offset="1" stopColor="#7c3aed" />
+        </linearGradient>
+      </defs>
+      <rect width="32" height="32" rx="9" fill={`url(#${id})`} />
+      {/* V chevron */}
+      <path
+        d="M6.2 8h4.9l4.9 10.4L20.9 8h4.9L16 26.8 6.2 8Z"
+        fill="#fff"
+        fillOpacity="0.16"
+      />
+      <path
+        d="M6.2 8h4.9l4.9 10.4L20.9 8h4.9L16 26.8 6.2 8Z"
+        fill="none"
+        stroke="#fff"
+        strokeWidth="1.4"
+        strokeLinejoin="round"
+        opacity="0.9"
+      />
+      {/* rising contrail */}
+      <path
+        d="M7 22.5 C 13 19.5, 19 15.5, 25.2 9.8"
+        fill="none"
+        stroke="#fff"
+        strokeWidth="1.7"
+        strokeLinecap="round"
+        strokeDasharray="0.2 3.4"
+      />
+      {/* plane at contrail tip */}
+      <path d="M28.6 6.2 22.9 8.1l2.5 2.6 3.2-4.5Z" fill="#fff" />
+    </svg>
+  );
+};

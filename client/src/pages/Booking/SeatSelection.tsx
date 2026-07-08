@@ -116,7 +116,7 @@ export default function SeatSelection() {
   const { flight } = data;
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-8 items-start animate-fade-up">
+    <div className="space-y-6 animate-fade-up">
       <div>
         <Link
           to="/flights"
@@ -157,62 +157,62 @@ export default function SeatSelection() {
         <SeatMap seats={data.seats} onSeatClick={handleSeatClick} busySeatId={busySeatId} />
       </div>
 
-      <aside className="bg-white rounded-2xl border border-slate-200/80 shadow-soft p-6 lg:sticky lg:top-24">
-        <h2 className="font-extrabold tracking-tight mb-5">Your selection</h2>
-
-        {mySeats.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-slate-200 p-5 text-center">
-            <p className="text-2xl mb-2">💺</p>
-            <p className="text-sm font-medium text-ink-soft leading-relaxed">
-              Tap an available seat to hold it. Held seats are reserved for you for{' '}
-              <span className="font-bold text-ink">5 minutes</span>.
-            </p>
-          </div>
-        ) : (
-          <>
-            <div className="flex items-center justify-between text-sm mb-5 p-3.5 rounded-xl bg-brand-50 border border-brand-100 text-brand-800 font-semibold">
-              <span>Seats held for</span>
-              {earliestExpiry && (
-                <LockCountdown expiresAt={earliestExpiry} onExpire={invalidate} />
-              )}
-            </div>
-            <ul className="space-y-3 mb-5">
-              {mySeats.map((seat) => (
-                <li key={seat.id} className="flex items-center justify-between text-sm">
-                  <span className="flex items-center gap-2.5">
+      <aside className="bg-white rounded-2xl border border-slate-200/80 shadow-soft p-5 sm:p-6">
+        <div className="flex flex-col lg:flex-row lg:items-center gap-5">
+          <div className="flex-1 min-w-0">
+            <h2 className="font-extrabold tracking-tight mb-3">Your selection</h2>
+            {mySeats.length === 0 ? (
+              <p className="text-sm font-medium text-ink-soft">
+                💺 Tap an available seat to hold it — held seats are reserved for you for{' '}
+                <span className="font-bold text-ink">5 minutes</span>.
+              </p>
+            ) : (
+              <ul className="flex flex-wrap gap-2.5">
+                {mySeats.map((seat) => (
+                  <li
+                    key={seat.id}
+                    className="flex items-center gap-2 pl-1.5 pr-3 py-1.5 rounded-xl border border-brand-100 bg-brand-50"
+                  >
                     <span className="w-8 h-8 rounded-lg bg-gradient-to-br from-brand-600 to-violet-glow text-white text-[11px] font-bold flex items-center justify-center">
                       {seat.seatNumber}
                     </span>
-                    <span className="font-semibold text-ink capitalize">
+                    <span className="text-xs font-semibold text-ink capitalize leading-tight">
                       {seat.cabinClass === 'BUSINESS' ? 'Business' : 'Economy'}
-                      <span className="block text-[11px] font-medium text-ink-soft">
-                        {seat.seatType.toLowerCase()} seat
+                      <span className="block text-[10px] font-medium text-ink-soft">
+                        {seat.seatType.toLowerCase()} ·{' '}
+                        {Number(seat.extraPrice) > 0 ? `+₱${Number(seat.extraPrice)}` : 'free'}
                       </span>
                     </span>
-                  </span>
-                  <span className="font-bold text-ink">
-                    {Number(seat.extraPrice) > 0 ? `+₱${Number(seat.extraPrice)}` : 'Free'}
-                  </span>
-                </li>
-              ))}
-            </ul>
-            <div className="border-t border-slate-100 pt-4 flex items-center justify-between text-sm font-extrabold mb-5">
-              <span>Seat fees</span>
-              <span className="tabular-nums">₱{seatFees.toLocaleString()}</span>
-            </div>
-          </>
-        )}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
 
-        <button
-          disabled={mySeats.length === 0}
-          className="w-full h-12 mt-4 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-brand-600 to-violet-glow shadow-soft hover:shadow-lift hover:opacity-95 active:scale-[0.99] transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-          title="Passenger details — next module"
-        >
-          Continue to passenger details
-        </button>
-        <p className="text-[11px] font-medium text-ink-soft mt-2.5 text-center">
-          Booking flow coming in the next module
-        </p>
+          <div className="flex items-center gap-5 lg:border-l lg:border-slate-100 lg:pl-6 shrink-0">
+            {mySeats.length > 0 && earliestExpiry && (
+              <div className="text-sm font-semibold text-brand-800 bg-brand-50 border border-brand-100 rounded-xl px-3.5 py-2.5">
+                <span className="block text-[10px] font-bold uppercase tracking-wide text-ink-soft">
+                  Held for
+                </span>
+                <LockCountdown expiresAt={earliestExpiry} onExpire={invalidate} />
+              </div>
+            )}
+            <div className="text-right">
+              <p className="text-[10px] font-bold uppercase tracking-wide text-ink-soft">
+                Seat fees
+              </p>
+              <p className="text-xl font-extrabold tabular-nums">₱{seatFees.toLocaleString()}</p>
+            </div>
+            <button
+              disabled={mySeats.length === 0}
+              className="h-12 px-6 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-brand-600 to-violet-glow shadow-soft hover:shadow-lift hover:opacity-95 active:scale-[0.99] transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+              title="Passenger details — next module"
+            >
+              Continue
+            </button>
+          </div>
+        </div>
       </aside>
     </div>
   );

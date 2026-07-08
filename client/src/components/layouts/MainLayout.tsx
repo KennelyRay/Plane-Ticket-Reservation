@@ -49,6 +49,11 @@ export default function MainLayout() {
                 <NavLink to="/dashboard" className={navLinkClass}>
                   Dashboard
                 </NavLink>
+                {user.role === 'ADMIN' && (
+                  <NavLink to="/admin" className={navLinkClass}>
+                    Admin
+                  </NavLink>
+                )}
                 <div className="hidden sm:flex items-center gap-2 ml-2 pl-3 border-l border-slate-200">
                   <span className="w-8 h-8 rounded-full bg-gradient-to-br from-brand-600 to-violet-glow text-white text-xs font-bold flex items-center justify-center">
                     {user.firstName[0]}

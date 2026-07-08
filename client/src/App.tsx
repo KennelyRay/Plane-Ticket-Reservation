@@ -6,6 +6,7 @@ import Register from './pages/Auth/Register';
 import FlightSearch from './pages/Flights/FlightSearch';
 import SeatSelection from './pages/Booking/SeatSelection';
 import Dashboard from './pages/Dashboard/Dashboard';
+import AdminDashboard from './pages/Admin/AdminDashboard';
 
 export default function App() {
   return (
@@ -20,6 +21,10 @@ export default function App() {
           <Route element={<ProtectedRoute />}>
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/flights/:flightId/seats" element={<SeatSelection />} />
+          </Route>
+
+          <Route element={<ProtectedRoute roles={['ADMIN']} />}>
+            <Route path="/admin" element={<AdminDashboard />} />
           </Route>
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
