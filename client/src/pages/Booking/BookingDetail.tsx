@@ -6,6 +6,7 @@ import { bookingApi, type BookingStatus } from '../../features/booking/api';
 import { readReturnLeg, clearReturnLeg } from '../../features/booking/returnLeg';
 import LockCountdown from '../../components/booking/LockCountdown';
 import BoardingPassCard from '../../components/booking/BoardingPassCard';
+import SuccessModal from '../../components/ui/SuccessModal';
 import { CheckInIcon, PlaneIcon, TicketIcon } from '../../components/ui/icons';
 
 const CHECKIN_OPENS_HOURS_BEFORE = 24;
@@ -30,6 +31,7 @@ export default function BookingDetail() {
   const queryClient = useQueryClient();
   const justPaid = Boolean((location.state as { justPaid?: boolean } | null)?.justPaid);
   const [cancelError, setCancelError] = useState<string | null>(null);
+  const [showConfirmedModal, setShowConfirmedModal] = useState(justPaid);
 
   const { data: booking, isLoading, isError } = useQuery({
     queryKey: ['booking', bookingId],
@@ -104,6 +106,45 @@ export default function BookingDetail() {
 
   return (
     <div className="space-y-6 animate-fade-up max-w-3xl mx-auto">
+      <SuccessModal
+        open={showConfirmedModal && booking.status === 'CONFIRMED'}
+        onClose={() => setShowConfirmedModal(false)}
+        title="Booking confirmed!"
+        message={
+          <>
+            Payment received — you're all set for{' '}
+            <span className="font-bold text-ink">
+              {flight.route.originAirport.city} → {flight.route.destinationAirport.city}
+            </span>
+            . Your reference is{' '}
+            <span className="font-extrabold text-ink tabular-nums">
+              {booking.bookingReference}
+            </span>{' '}
+            — keep it handy for check-in.
+          </>
+        }
+      >
+        {offerReturn && returnLeg && (
+          <Link
+            to={`/flights?origin=${returnLeg.origin}&destination=${returnLeg.destination}&date=${returnLeg.date}&trip=one&sort=departure&page=1`}
+            onClick={clearReturnLeg}
+            className="w-full h-11 rounded-xl inline-flex items-center justify-center text-sm font-bold text-white bg-gradient-to-r from-brand-600 to-violet-glow shadow-soft hover:shadow-lift hover:opacity-95 transition-all"
+          >
+            Book your return flight →
+          </Link>
+        )}
+        <button
+          onClick={() => setShowConfirmedModal(false)}
+          className={`w-full h-11 rounded-xl text-sm font-bold transition-all ${
+            offerReturn && returnLeg
+              ? 'text-ink-soft border border-slate-200 hover:border-brand-300 hover:text-brand-700'
+              : 'text-white bg-gradient-to-r from-brand-600 to-violet-glow shadow-soft hover:shadow-lift hover:opacity-95 active:scale-[0.99]'
+          }`}
+        >
+          View my booking
+        </button>
+      </SuccessModal>
+
       <Link
         to="/bookings"
         className="inline-flex items-center gap-1 text-sm font-bold text-brand-600 hover:underline"

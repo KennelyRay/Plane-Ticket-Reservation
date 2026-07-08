@@ -7,6 +7,7 @@ import { isAxiosError } from 'axios';
 import { authApi } from '../../features/auth/api';
 import { useAuthStore } from '../../features/auth/store';
 import AuthShell from '../../components/layouts/AuthShell';
+import SuccessModal from '../../components/ui/SuccessModal';
 
 const schema = z.object({
   email: z.string().email('Enter a valid email'),
@@ -24,6 +25,7 @@ export default function Login() {
   const navigate = useNavigate();
   const setAuth = useAuthStore((s) => s.setAuth);
   const [serverError, setServerError] = useState<string | null>(null);
+  const [welcomeName, setWelcomeName] = useState<string | null>(null);
 
   const {
     register,
@@ -36,13 +38,15 @@ export default function Login() {
     try {
       const { user, accessToken } = await authApi.login(values);
       setAuth(user, accessToken);
-      navigate('/dashboard');
+      setWelcomeName(user.firstName);
     } catch (err) {
       setServerError(
         isAxiosError(err) ? err.response?.data?.message ?? 'Login failed' : 'Login failed'
       );
     }
   };
+
+  const goToDashboard = () => navigate('/dashboard');
 
   return (
     <AuthShell title="Welcome back" subtitle="Sign in to manage your bookings and check in faster.">
@@ -82,6 +86,27 @@ export default function Login() {
           Create one
         </Link>
       </p>
+
+      <SuccessModal
+        open={welcomeName !== null}
+        onClose={goToDashboard}
+        tone="brand"
+        title={`Welcome back, ${welcomeName}!`}
+        message="You're signed in and ready to fly. Your bookings and check-ins are one tap away."
+      >
+        <button
+          onClick={goToDashboard}
+          className="w-full h-11 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-brand-600 to-violet-glow shadow-soft hover:shadow-lift hover:opacity-95 active:scale-[0.99] transition-all"
+        >
+          Continue to dashboard
+        </button>
+        <Link
+          to="/flights"
+          className="w-full h-11 rounded-xl inline-flex items-center justify-center text-sm font-bold text-ink-soft border border-slate-200 hover:border-brand-300 hover:text-brand-700 transition-colors"
+        >
+          Browse flights
+        </Link>
+      </SuccessModal>
     </AuthShell>
   );
 }

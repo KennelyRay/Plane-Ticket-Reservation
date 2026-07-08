@@ -1,7 +1,9 @@
+import { useState } from 'react';
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../features/auth/store';
 import { authApi } from '../../features/auth/api';
 import { LogoMark } from '../ui/icons';
+import SuccessModal from '../ui/SuccessModal';
 
 const navLinkClass = ({ isActive }: { isActive: boolean }) =>
   `relative px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
@@ -25,14 +27,22 @@ function Wordmark() {
 export default function MainLayout() {
   const { user, clearAuth } = useAuthStore();
   const navigate = useNavigate();
+  const [signedOut, setSignedOut] = useState(false);
 
   const handleLogout = async () => {
     try {
       await authApi.logout();
     } finally {
       clearAuth();
-      navigate('/login');
+      // Clearing auth may bounce a protected page to /login via ProtectedRoute;
+      // the modal lives here in the layout, so it survives that redirect.
+      setSignedOut(true);
     }
+  };
+
+  const dismissSignedOut = () => {
+    setSignedOut(false);
+    navigate('/login');
   };
 
   return (
@@ -115,6 +125,29 @@ export default function MainLayout() {
           </div>
         </div>
       </footer>
+
+      <SuccessModal
+        open={signedOut}
+        onClose={dismissSignedOut}
+        title="You've been signed out"
+        message="Thanks for flying with VertixFlights — see you on your next trip!"
+      >
+        <button
+          onClick={dismissSignedOut}
+          className="w-full h-11 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-brand-600 to-violet-glow shadow-soft hover:shadow-lift hover:opacity-95 active:scale-[0.99] transition-all"
+        >
+          Done
+        </button>
+        <button
+          onClick={() => {
+            setSignedOut(false);
+            navigate('/flights');
+          }}
+          className="w-full h-11 rounded-xl text-sm font-bold text-ink-soft border border-slate-200 hover:border-brand-300 hover:text-brand-700 transition-colors"
+        >
+          Keep browsing flights
+        </button>
+      </SuccessModal>
     </div>
   );
 }
