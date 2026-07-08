@@ -413,7 +413,9 @@ export default function FlightSearch() {
       {/* Booking dock — one unified bar floating over the hero */}
       <form
         onSubmit={handleSubmit}
-        className="relative mx-2 sm:mx-8 bg-white rounded-2xl border border-slate-200/80 shadow-lift animate-fade-up"
+        // z-10 lifts the dock (and the airport dropdowns inside it) above the
+        // result cards, whose fade-up transform otherwise paints over them
+        className="relative z-10 mx-2 sm:mx-8 bg-white rounded-2xl border border-slate-200/80 shadow-lift animate-fade-up"
         style={{ animationDelay: '140ms', marginTop: 'calc(-6.5rem)' }}
       >
         {/* Trip type header */}
