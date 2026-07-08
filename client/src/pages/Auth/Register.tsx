@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { isAxiosError } from 'axios';
 import { authApi } from '../../features/auth/api';
 import { useAuthStore } from '../../features/auth/store';
+import AuthShell from '../../components/layouts/AuthShell';
 
 const schema = z
   .object({
@@ -23,7 +24,9 @@ const schema = z
 type FormValues = z.infer<typeof schema>;
 
 const inputClass =
-  'w-full px-3 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-sky-500';
+  'w-full h-12 px-3.5 rounded-xl border border-slate-200 bg-white text-[15px] font-medium text-ink placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-brand-500/60 focus:border-brand-400 transition-shadow';
+
+const labelClass = 'block text-[11px] font-bold uppercase tracking-wide text-ink-soft mb-1.5';
 
 export default function Register() {
   const navigate = useNavigate();
@@ -44,73 +47,74 @@ export default function Register() {
       navigate('/dashboard');
     } catch (err) {
       setServerError(
-        isAxiosError(err) ? err.response?.data?.message ?? 'Registration failed' : 'Registration failed'
+        isAxiosError(err)
+          ? err.response?.data?.message ?? 'Registration failed'
+          : 'Registration failed'
       );
     }
   };
 
   return (
-    <div className="max-w-md mx-auto mt-12">
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8">
-        <h1 className="text-2xl font-bold text-slate-800 mb-1">Create your account</h1>
-        <p className="text-sm text-slate-500 mb-6">Book flights in minutes</p>
+    <AuthShell title="Create your account" subtitle="Book flights in minutes — no fees, no fuss.">
+      {serverError && (
+        <div className="mb-5 p-3.5 rounded-xl bg-red-50 border border-red-100 text-red-700 text-sm font-medium">
+          {serverError}
+        </div>
+      )}
 
-        {serverError && (
-          <div className="mb-4 p-3 rounded-lg bg-red-50 text-red-700 text-sm">{serverError}</div>
-        )}
-
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">First name</label>
-              <input {...register('firstName')} className={inputClass} placeholder="Juan" />
-              {errors.firstName && (
-                <p className="text-xs text-red-600 mt-1">{errors.firstName.message}</p>
-              )}
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Last name</label>
-              <input {...register('lastName')} className={inputClass} placeholder="dela Cruz" />
-              {errors.lastName && (
-                <p className="text-xs text-red-600 mt-1">{errors.lastName.message}</p>
-              )}
-            </div>
-          </div>
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+        <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
-            <input type="email" {...register('email')} className={inputClass} placeholder="you@example.com" />
-            {errors.email && <p className="text-xs text-red-600 mt-1">{errors.email.message}</p>}
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Password</label>
-            <input type="password" {...register('password')} className={inputClass} placeholder="••••••••" />
-            {errors.password && (
-              <p className="text-xs text-red-600 mt-1">{errors.password.message}</p>
+            <label className={labelClass}>First name</label>
+            <input {...register('firstName')} className={inputClass} placeholder="Juan" />
+            {errors.firstName && (
+              <p className="text-xs font-medium text-red-600 mt-1.5">{errors.firstName.message}</p>
             )}
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Confirm password</label>
-            <input type="password" {...register('confirmPassword')} className={inputClass} placeholder="••••••••" />
-            {errors.confirmPassword && (
-              <p className="text-xs text-red-600 mt-1">{errors.confirmPassword.message}</p>
+            <label className={labelClass}>Last name</label>
+            <input {...register('lastName')} className={inputClass} placeholder="dela Cruz" />
+            {errors.lastName && (
+              <p className="text-xs font-medium text-red-600 mt-1.5">{errors.lastName.message}</p>
             )}
           </div>
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="w-full py-2.5 rounded-lg bg-sky-600 hover:bg-sky-700 text-white font-medium disabled:opacity-50"
-          >
-            {isSubmitting ? 'Creating account…' : 'Create account'}
-          </button>
-        </form>
+        </div>
+        <div>
+          <label className={labelClass}>Email</label>
+          <input type="email" {...register('email')} className={inputClass} placeholder="you@example.com" />
+          {errors.email && (
+            <p className="text-xs font-medium text-red-600 mt-1.5">{errors.email.message}</p>
+          )}
+        </div>
+        <div>
+          <label className={labelClass}>Password</label>
+          <input type="password" {...register('password')} className={inputClass} placeholder="Minimum 8 characters" />
+          {errors.password && (
+            <p className="text-xs font-medium text-red-600 mt-1.5">{errors.password.message}</p>
+          )}
+        </div>
+        <div>
+          <label className={labelClass}>Confirm password</label>
+          <input type="password" {...register('confirmPassword')} className={inputClass} placeholder="Repeat your password" />
+          {errors.confirmPassword && (
+            <p className="text-xs font-medium text-red-600 mt-1.5">{errors.confirmPassword.message}</p>
+          )}
+        </div>
+        <button
+          type="submit"
+          disabled={isSubmitting}
+          className="w-full h-12 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-brand-600 to-violet-glow shadow-soft hover:shadow-lift hover:opacity-95 active:scale-[0.99] transition-all disabled:opacity-50"
+        >
+          {isSubmitting ? 'Creating account…' : 'Create account'}
+        </button>
+      </form>
 
-        <p className="text-sm text-slate-500 mt-6 text-center">
-          Already have an account?{' '}
-          <Link to="/login" className="text-sky-600 font-medium hover:underline">
-            Sign in
-          </Link>
-        </p>
-      </div>
-    </div>
+      <p className="text-sm font-medium text-ink-soft mt-7 text-center">
+        Already have an account?{' '}
+        <Link to="/login" className="text-brand-600 font-bold hover:underline">
+          Sign in
+        </Link>
+      </p>
+    </AuthShell>
   );
 }

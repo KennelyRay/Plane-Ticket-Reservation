@@ -1,5 +1,74 @@
 @import "tailwindcss";
 
+@theme {
+  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  /* Brand */
+  --color-brand-50: #eef4ff;
+  --color-brand-100: #dce7fd;
+  --color-brand-200: #c0d4fc;
+  --color-brand-300: #94b8fa;
+  --color-brand-400: #6191f6;
+  --color-brand-500: #3d6bf1;
+  --color-brand-600: #2563eb;
+  --color-brand-700: #1f4fd0;
+  --color-brand-800: #2042a8;
+  --color-brand-900: #1f3a85;
+  --color-brand-950: #172554;
+
+  --color-violet-glow: #7c3aed;
+
+  /* Ink & surfaces */
+  --color-ink: #0b1526;
+  --color-ink-soft: #46546b;
+  --color-surface: #f6f8fc;
+
+  --shadow-soft: 0 1px 2px rgb(11 21 38 / 0.04), 0 8px 24px -12px rgb(11 21 38 / 0.12);
+  --shadow-lift: 0 2px 4px rgb(11 21 38 / 0.05), 0 16px 40px -16px rgb(11 21 38 / 0.22);
+
+  --animate-fade-up: fade-up 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-fade-in: fade-in 0.4s ease both;
+
+  @keyframes fade-up {
+    from {
+      opacity: 0;
+      transform: translateY(12px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+}
+
 body {
-  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  background-color: var(--color-surface);
+  color: var(--color-ink);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: var(--color-brand-600);
+  color: #fff;
+}
+
+/* Thin, unobtrusive scrollbars */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #c3cddd transparent;
+}
+
+/* Date input icon alignment */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  opacity: 0.55;
 }
