@@ -20,7 +20,7 @@ export default function MainLayout() {
       <header className="bg-white border-b border-slate-200 sticky top-0 z-10">
         <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2 font-bold text-xl text-sky-700">
-            ✈️ SkyBook
+            ✈️ VertixFlights
           </Link>
           <nav className="flex items-center gap-6 text-sm font-medium text-slate-600">
             <Link to="/flights" className="hover:text-sky-700">Flights</Link>
