@@ -20,6 +20,40 @@ const AIRPORTS = [
   { name: 'Francisco Bangoy International Airport', iataCode: 'DVO', icaoCode: 'RPMD', city: 'Davao', country: 'Philippines', timezone: 'Asia/Manila' },
   { name: 'Iloilo International Airport', iataCode: 'ILO', icaoCode: 'RPVI', city: 'Iloilo', country: 'Philippines', timezone: 'Asia/Manila' },
   { name: 'Clark International Airport', iataCode: 'CRK', icaoCode: 'RPLC', city: 'Clark', country: 'Philippines', timezone: 'Asia/Manila' },
+  { name: 'Zamboanga International Airport', iataCode: 'ZAM', icaoCode: 'RPMZ', city: 'Zamboanga', country: 'Philippines', timezone: 'Asia/Manila' },
+  { name: 'General Santos International Airport', iataCode: 'GES', icaoCode: 'RPMR', city: 'General Santos', country: 'Philippines', timezone: 'Asia/Manila' },
+  { name: 'Laoag International Airport', iataCode: 'LAO', icaoCode: 'RPLI', city: 'Laoag', country: 'Philippines', timezone: 'Asia/Manila' },
+  { name: 'Subic Bay International Airport', iataCode: 'SFS', icaoCode: 'RPLB', city: 'Subic Bay', country: 'Philippines', timezone: 'Asia/Manila' },
+  { name: 'Bicol International Airport', iataCode: 'DRP', icaoCode: 'RPLK', city: 'Legazpi', country: 'Philippines', timezone: 'Asia/Manila' },
+  { name: 'Daniel Z. Romualdez Airport', iataCode: 'TAC', icaoCode: 'RPVA', city: 'Tacloban', country: 'Philippines', timezone: 'Asia/Manila' },
+  { name: 'Bancasi Airport', iataCode: 'BXU', icaoCode: 'RPME', city: 'Butuan', country: 'Philippines', timezone: 'Asia/Manila' },
+  { name: 'Dipolog Airport', iataCode: 'DPL', icaoCode: 'RPMG', city: 'Dipolog', country: 'Philippines', timezone: 'Asia/Manila' },
+  { name: 'Sibulan Airport', iataCode: 'DGT', icaoCode: 'RPVD', city: 'Dumaguete', country: 'Philippines', timezone: 'Asia/Manila' },
+  { name: 'Godofredo P. Ramos Airport', iataCode: 'MPH', icaoCode: 'RPVE', city: 'Caticlan (Boracay)', country: 'Philippines', timezone: 'Asia/Manila' },
+  { name: 'Roxas Airport', iataCode: 'RXS', icaoCode: 'RPVR', city: 'Roxas', country: 'Philippines', timezone: 'Asia/Manila' },
+  { name: 'Tuguegarao Airport', iataCode: 'TUG', icaoCode: 'RPUT', city: 'Tuguegarao', country: 'Philippines', timezone: 'Asia/Manila' },
+  { name: 'Cauayan Airport', iataCode: 'CYZ', icaoCode: 'RPUY', city: 'Cauayan', country: 'Philippines', timezone: 'Asia/Manila' },
+  { name: 'Basco Airport', iataCode: 'BSO', icaoCode: 'RPUO', city: 'Basco (Batanes)', country: 'Philippines', timezone: 'Asia/Manila' },
+  { name: 'Naga Airport', iataCode: 'WNP', icaoCode: 'RPUN', city: 'Naga', country: 'Philippines', timezone: 'Asia/Manila' },
+  { name: 'San Jose Airport', iataCode: 'SJI', icaoCode: 'RPUH', city: 'San Jose (Mindoro)', country: 'Philippines', timezone: 'Asia/Manila' },
+  { name: 'Moises R. Espinosa Airport', iataCode: 'MBT', icaoCode: 'RPVJ', city: 'Masbate', country: 'Philippines', timezone: 'Asia/Manila' },
+  { name: 'Calbayog Airport', iataCode: 'CYP', icaoCode: 'RPVC', city: 'Calbayog', country: 'Philippines', timezone: 'Asia/Manila' },
+  { name: 'Catarman National Airport', iataCode: 'CRM', icaoCode: 'RPVF', city: 'Catarman', country: 'Philippines', timezone: 'Asia/Manila' },
+  { name: 'Labo Airport', iataCode: 'OZC', icaoCode: 'RPMO', city: 'Ozamiz', country: 'Philippines', timezone: 'Asia/Manila' },
+  { name: 'Pagadian Airport', iataCode: 'PAG', icaoCode: 'RPMP', city: 'Pagadian', country: 'Philippines', timezone: 'Asia/Manila' },
+  { name: 'Awang Airport', iataCode: 'CBO', icaoCode: 'RPMC', city: 'Cotabato', country: 'Philippines', timezone: 'Asia/Manila' },
+  { name: 'Surigao Airport', iataCode: 'SUG', icaoCode: 'RPMS', city: 'Surigao', country: 'Philippines', timezone: 'Asia/Manila' },
+  { name: 'Tandag Airport', iataCode: 'TDG', icaoCode: 'RPMW', city: 'Tandag', country: 'Philippines', timezone: 'Asia/Manila' },
+  { name: 'Sayak Airport', iataCode: 'IAO', icaoCode: 'RPNS', city: 'Siargao', country: 'Philippines', timezone: 'Asia/Manila' },
+  { name: 'Camiguin Airport', iataCode: 'CGM', icaoCode: 'RPMH', city: 'Camiguin', country: 'Philippines', timezone: 'Asia/Manila' },
+  { name: 'Jolo Airport', iataCode: 'JOL', icaoCode: 'RPMJ', city: 'Jolo', country: 'Philippines', timezone: 'Asia/Manila' },
+  { name: 'Sanga-Sanga Airport', iataCode: 'TWT', icaoCode: 'RPMN', city: 'Tawi-Tawi (Bongao)', country: 'Philippines', timezone: 'Asia/Manila' },
+  { name: 'Virac Airport', iataCode: 'VRC', icaoCode: 'RPUV', city: 'Virac (Catanduanes)', country: 'Philippines', timezone: 'Asia/Manila' },
+  { name: 'Marinduque Airport', iataCode: 'MRQ', icaoCode: 'RPUW', city: 'Marinduque', country: 'Philippines', timezone: 'Asia/Manila' },
+  { name: 'Loakan Airport', iataCode: 'BAG', icaoCode: 'RPUB', city: 'Baguio', country: 'Philippines', timezone: 'Asia/Manila' },
+  { name: 'Francisco B. Reyes Airport', iataCode: 'USU', icaoCode: 'RPVV', city: 'Coron (Busuanga)', country: 'Philippines', timezone: 'Asia/Manila' },
+  { name: 'Evelio Javier Airport', iataCode: 'EUQ', icaoCode: 'RPVS', city: 'Antique (San Jose)', country: 'Philippines', timezone: 'Asia/Manila' },
+  { name: 'El Nido Airport', iataCode: 'ENI', icaoCode: 'RPEN', city: 'El Nido', country: 'Philippines', timezone: 'Asia/Manila' },
   { name: 'Puerto Princesa International Airport', iataCode: 'PPS', icaoCode: 'RPVP', city: 'Puerto Princesa', country: 'Philippines', timezone: 'Asia/Manila' },
   { name: 'Bohol–Panglao International Airport', iataCode: 'TAG', icaoCode: 'RPSP', city: 'Bohol', country: 'Philippines', timezone: 'Asia/Manila' },
   { name: 'Kalibo International Airport', iataCode: 'KLO', icaoCode: 'RPVK', city: 'Kalibo', country: 'Philippines', timezone: 'Asia/Manila' },
@@ -82,6 +116,87 @@ const ROUTES: Array<[string, string, number, number]> = [
   ['CEB', 'SIN', 215, 2270],
   ['SIN', 'CEB', 215, 2270],
 ];
+
+// --- Domestic hub-and-spoke network ------------------------------------
+// Every regional Philippine airport connects to at least one hub. Route
+// distance is derived from the coordinates below (great-circle) and block
+// time approximated as 20 min taxi/climb + cruise at ~480 km/h.
+const COORDS: Record<string, [number, number]> = {
+  MNL: [14.508, 121.019],
+  CEB: [10.307, 123.979],
+  ZAM: [6.922, 122.06],
+  GES: [6.058, 125.096],
+  LAO: [18.178, 120.532],
+  SFS: [14.794, 120.271],
+  DRP: [13.07, 123.735],
+  TAC: [11.228, 125.028],
+  BXU: [8.951, 125.479],
+  DPL: [8.602, 123.334],
+  DGT: [9.334, 123.3],
+  MPH: [11.924, 121.954],
+  RXS: [11.598, 122.752],
+  TUG: [17.643, 121.733],
+  CYZ: [16.93, 121.753],
+  BSO: [20.451, 121.98],
+  WNP: [13.585, 123.27],
+  SJI: [12.361, 121.047],
+  MBT: [12.369, 123.629],
+  CYP: [12.072, 124.545],
+  CRM: [12.502, 124.636],
+  OZC: [8.178, 123.842],
+  PAG: [7.831, 123.461],
+  CBO: [7.165, 124.21],
+  SUG: [9.756, 125.481],
+  TDG: [9.072, 126.171],
+  IAO: [9.859, 126.014],
+  CGM: [9.254, 124.707],
+  JOL: [6.054, 121.011],
+  TWT: [5.047, 119.743],
+  VRC: [13.576, 124.206],
+  MRQ: [13.361, 121.826],
+  BAG: [16.375, 120.62],
+  USU: [12.121, 120.1],
+  EUQ: [10.766, 121.933],
+  ENI: [11.202, 119.416],
+  PPS: [9.742, 118.759],
+  CGY: [8.612, 124.456],
+};
+
+const MNL_SPOKES = [
+  'ZAM', 'GES', 'LAO', 'DRP', 'TAC', 'BXU', 'DPL', 'DGT', 'MPH', 'RXS',
+  'TUG', 'CYZ', 'BSO', 'WNP', 'SJI', 'MBT', 'CYP', 'CRM', 'OZC', 'PAG',
+  'CBO', 'SUG', 'TDG', 'IAO', 'CGM', 'JOL', 'VRC', 'MRQ', 'USU', 'EUQ', 'ENI',
+];
+const CEB_SPOKES = [
+  'ZAM', 'GES', 'TAC', 'BXU', 'DPL', 'DGT', 'MPH', 'OZC', 'PAG', 'CBO',
+  'SUG', 'TDG', 'IAO', 'CGM', 'SFS', 'BAG', 'PPS', 'CGY',
+];
+const ZAM_SPOKES = ['JOL', 'TWT'];
+
+const toRad = (deg: number) => (deg * Math.PI) / 180;
+const haversineKm = ([lat1, lon1]: [number, number], [lat2, lon2]: [number, number]) => {
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+  return Math.round(6371 * 2 * Math.asin(Math.sqrt(a)));
+};
+
+// Appended AFTER the manual list: route array order determines flight
+// numbers, so existing indices must never shift between seed runs.
+const HUB_SPOKES: Array<[string, string[]]> = [
+  ['MNL', MNL_SPOKES],
+  ['CEB', CEB_SPOKES],
+  ['ZAM', ZAM_SPOKES],
+];
+for (const [hub, spokes] of HUB_SPOKES) {
+  for (const code of spokes) {
+    const km = haversineKm(COORDS[hub], COORDS[code]);
+    const duration = Math.round(20 + km / 8);
+    ROUTES.push([hub, code, duration, km], [code, hub, duration, km]);
+  }
+}
 
 async function seedSeats(seatLayoutId: string) {
   const columns = ['A', 'B', 'C', 'D', 'E', 'F'];

@@ -9,4 +9,24 @@ export const airportController = {
     });
     res.json({ success: true, data: { airports } });
   }),
+
+  // Flat origin→destination pairs so the client can offer only reachable
+  // destinations once an origin is picked.
+  routes: asyncHandler(async (_req: Request, res: Response) => {
+    const routes = await prisma.flightRoute.findMany({
+      select: {
+        originAirport: { select: { iataCode: true } },
+        destinationAirport: { select: { iataCode: true } },
+      },
+    });
+    res.json({
+      success: true,
+      data: {
+        routes: routes.map((r) => ({
+          origin: r.originAirport.iataCode,
+          destination: r.destinationAirport.iataCode,
+        })),
+      },
+    });
+  }),
 };

@@ -39,7 +39,8 @@ export default function AirportSelect({
             a.country.toLowerCase().includes(q)
         )
       : airports;
-    return list.slice(0, 8);
+    // The menu scrolls (max-h-80), so show the whole network when browsing
+    return list.slice(0, 60);
   }, [airports, q]);
 
   useEffect(() => setActive(0), [q]);

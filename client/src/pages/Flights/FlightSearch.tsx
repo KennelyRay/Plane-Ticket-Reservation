@@ -240,6 +240,29 @@ export default function FlightSearch() {
     staleTime: Infinity,
   });
 
+  const { data: routePairs = [] } = useQuery({
+    queryKey: ['route-map'],
+    queryFn: flightApi.routes,
+    staleTime: Infinity,
+  });
+
+  // origin IATA → set of reachable destination IATAs
+  const destinationMap = useMemo(() => {
+    const map = new Map<string, Set<string>>();
+    routePairs.forEach(({ origin, destination }) => {
+      if (!map.has(origin)) map.set(origin, new Set());
+      map.get(origin)!.add(destination);
+    });
+    return map;
+  }, [routePairs]);
+
+  // The "To" list only offers destinations actually served from the chosen
+  // origin; with no origin picked it offers every airport.
+  const destinationAirports = useMemo(() => {
+    const reachable = form.origin ? destinationMap.get(form.origin) : null;
+    return reachable ? airports.filter((a) => reachable.has(a.iataCode)) : airports;
+  }, [airports, destinationMap, form.origin]);
+
   const { data, isLoading, isError, isPlaceholderData } = useQuery({
     queryKey: ['flights', executed.origin, executed.destination, executed.date, executed.sort, executed.page],
     queryFn: () =>
@@ -468,7 +491,20 @@ export default function FlightSearch() {
             <AirportSelect
               label="From"
               value={form.origin}
-              onChange={(origin) => setForm((f) => ({ ...f, origin }))}
+              onChange={(origin) =>
+                setForm((f) => ({
+                  ...f,
+                  origin,
+                  // drop a destination that isn't served from the new origin
+                  destination:
+                    origin &&
+                    f.destination &&
+                    destinationMap.size > 0 &&
+                    !destinationMap.get(origin)?.has(f.destination)
+                      ? ''
+                      : f.destination,
+                }))
+              }
               airports={airports}
               hintClass="text-brand-600/80"
             />
@@ -484,10 +520,10 @@ export default function FlightSearch() {
 
           <div className="relative px-4 sm:px-5 py-3.5 pl-8 sm:pl-9 border-l border-slate-100 focus-within:bg-brand-50/40 transition-colors">
             <AirportSelect
-              label="To"
+              label={form.origin ? `To · ${destinationAirports.length} destinations` : 'To'}
               value={form.destination}
               onChange={(destination) => setForm((f) => ({ ...f, destination }))}
-              airports={airports}
+              airports={destinationAirports}
               hintClass="text-violet-glow/80"
               align="right"
             />

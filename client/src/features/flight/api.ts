@@ -28,4 +28,11 @@ export const flightApi = {
     const { data } = await api.get<ApiResponse<{ airports: Airport[] }>>('/airports');
     return data.data.airports;
   },
+
+  async routes() {
+    const { data } = await api.get<
+      ApiResponse<{ routes: { origin: string; destination: string }[] }>
+    >('/airports/routes');
+    return data.data.routes;
+  },
 };
