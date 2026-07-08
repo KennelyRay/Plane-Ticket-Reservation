@@ -4,6 +4,7 @@ import ProtectedRoute from './routes/ProtectedRoute';
 import Login from './pages/Auth/Login';
 import Register from './pages/Auth/Register';
 import FlightSearch from './pages/Flights/FlightSearch';
+import SeatSelection from './pages/Booking/SeatSelection';
 import Dashboard from './pages/Dashboard/Dashboard';
 
 export default function App() {
@@ -18,6 +19,7 @@ export default function App() {
 
           <Route element={<ProtectedRoute />}>
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/flights/:flightId/seats" element={<SeatSelection />} />
           </Route>
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />

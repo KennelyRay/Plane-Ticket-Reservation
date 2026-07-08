@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import authRoutes from './auth.routes';
 import flightRoutes from './flight.routes';
+import seatRoutes from './seat.routes';
 
 const router = Router();
 
@@ -10,6 +11,7 @@ router.get('/health', (_req, res) => {
 
 router.use('/auth', authRoutes);
 router.use('/flights', flightRoutes);
+router.use('/seats', seatRoutes);
 
 // Future modules mount here:
 // router.use('/users', userRoutes);
@@ -17,7 +19,6 @@ router.use('/flights', flightRoutes);
 // router.use('/airlines', airlineRoutes);
 // router.use('/airports', airportRoutes);
 // router.use('/aircrafts', aircraftRoutes);
-// router.use('/seats', seatRoutes);
 // router.use('/bookings', bookingRoutes);
 // router.use('/payments', paymentRoutes);
 // router.use('/tickets', ticketRoutes);

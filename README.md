@@ -46,6 +46,9 @@ npm run dev            # http://localhost:5173 (proxies /api + /socket.io to :50
 | `GET /api/auth/me` | Current user (Bearer token) |
 | `GET /api/flights?origin=MNL&destination=CEB&date=YYYY-MM-DD` | Search flights (paginated) |
 | `GET /api/flights/:id` | Flight details |
+| `GET /api/seats/flight/:flightId` | Seat map with live availability (AVAILABLE / LOCKED / BOOKED) |
+| `POST /api/seats/lock` | Hold a seat for 5 min (auth required) |
+| `POST /api/seats/release` | Release your held seat (auth required) |
 
 ## Backend pattern
 
@@ -59,9 +62,15 @@ seat_layouts, seats, flights, flight_routes, bookings, booking_passengers,
 tickets, boarding_passes, payments, refunds, notifications, audit_logs,
 promo_codes, baggage, meals.
 
+## Seat locking
+
+Seats are held for **5 minutes** when selected. Locks live in Redis when
+`REDIS_URL` is set; otherwise an in-memory store is used (dev only — set
+`REDIS_URL` in production). Lock/release events broadcast over Socket.IO
+(`seat:locked`, `seat:released`) to everyone viewing that flight's seat map.
+
 ## Roadmap (next modules)
 
-- Seat map viewer + Redis seat locking (Socket.IO events already stubbed in `server/src/sockets`)
 - Booking flow (passengers, meals, baggage, promo codes)
 - Payments (Stripe/PayMongo)
 - Ticket PDF + QR generation, email delivery

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { flightApi, type FlightSearchParams } from '../../features/flight/api';
 import type { Flight } from '../../types';
@@ -13,6 +14,7 @@ const formatDuration = (minutes: number) => `${Math.floor(minutes / 60)}h ${minu
 
 function FlightCard({ flight }: { flight: Flight }) {
   const { route } = flight;
+  const navigate = useNavigate();
   return (
     <div className="bg-white rounded-xl border border-slate-200 p-5 flex flex-col sm:flex-row sm:items-center gap-4 hover:shadow-md transition-shadow">
       <div className="flex-1">
@@ -46,8 +48,11 @@ function FlightCard({ flight }: { flight: Flight }) {
           ₱{Number(flight.economyPrice).toLocaleString()}
         </div>
         <div className="text-xs text-slate-400 mb-2">Economy, per passenger</div>
-        <button className="px-4 py-2 rounded-lg bg-sky-600 hover:bg-sky-700 text-white text-sm font-medium">
-          Select
+        <button
+          onClick={() => navigate(`/flights/${flight.id}/seats`)}
+          className="px-4 py-2 rounded-lg bg-sky-600 hover:bg-sky-700 text-white text-sm font-medium"
+        >
+          Select seats
         </button>
       </div>
     </div>

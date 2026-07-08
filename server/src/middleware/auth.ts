@@ -33,6 +33,21 @@ export const authenticate = (req: Request, _res: Response, next: NextFunction) =
   }
 };
 
+/** Attaches req.user when a valid token is present, but never rejects. */
+export const optionalAuth = (req: Request, _res: Response, next: NextFunction) => {
+  const header = req.headers.authorization;
+  const token = header?.startsWith('Bearer ') ? header.slice(7) : req.cookies?.accessToken;
+  if (token) {
+    try {
+      const payload = jwt.verify(token, env.jwt.secret) as AuthUser & jwt.JwtPayload;
+      req.user = { id: payload.id, email: payload.email, role: payload.role };
+    } catch {
+      // invalid token on a public route — treat as anonymous
+    }
+  }
+  next();
+};
+
 export const authorize =
   (...roles: string[]) =>
   (req: Request, _res: Response, next: NextFunction) => {
