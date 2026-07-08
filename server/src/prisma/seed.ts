@@ -77,16 +77,19 @@ async function main() {
 
   console.log('Seeding admin user...');
   const adminRole = await prisma.role.findUniqueOrThrow({ where: { name: 'ADMIN' } });
+  const adminPassword = await bcrypt.hash('Admin@1234', 10);
   await prisma.user.upsert({
     where: { email: 'admin@planetickets.local' },
-    update: {},
+    // Re-running the seed restores the documented credentials/role
+    update: { password: adminPassword, isEmailVerified: true, roleId: adminRole.id, userType: 'ADMIN' },
     create: {
       email: 'admin@planetickets.local',
-      password: await bcrypt.hash('Admin@1234', 10),
+      password: adminPassword,
       firstName: 'System',
       lastName: 'Administrator',
       isEmailVerified: true,
       roleId: adminRole.id,
+      userType: 'ADMIN',
     },
   });
 

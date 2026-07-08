@@ -16,6 +16,11 @@ enum UserStatus {
   SUSPENDED
 }
 
+enum UserType {
+  ADMIN
+  USER
+}
+
 enum Gender {
   MALE
   FEMALE
@@ -124,6 +129,7 @@ model User {
   passwordResetToken String?
   passwordResetExpires DateTime?
   status          UserStatus @default(ACTIVE)
+  userType        UserType   @default(USER) @map("user_type")
   roleId          String
   role            Role       @relation(fields: [roleId], references: [id])
   createdAt       DateTime   @default(now())
