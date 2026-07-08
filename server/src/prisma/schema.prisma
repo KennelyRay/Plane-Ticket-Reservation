@@ -1,0 +1,505 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ─────────────────────────── Enums ───────────────────────────
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum CabinClass {
+  ECONOMY
+  PREMIUM_ECONOMY
+  BUSINESS
+  FIRST
+}
+
+enum SeatType {
+  WINDOW
+  MIDDLE
+  AISLE
+}
+
+enum AircraftStatus {
+  ACTIVE
+  MAINTENANCE
+  RETIRED
+}
+
+enum FlightStatus {
+  SCHEDULED
+  BOARDING
+  DEPARTED
+  IN_AIR
+  ARRIVED
+  DELAYED
+  CANCELLED
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  EXPIRED
+  COMPLETED
+}
+
+enum TicketStatus {
+  ISSUED
+  CHECKED_IN
+  BOARDED
+  USED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+  PARTIALLY_REFUNDED
+}
+
+enum PaymentMethod {
+  CARD
+  GCASH
+  PAYMAYA
+  PAYPAL
+  BANK_TRANSFER
+}
+
+enum RefundStatus {
+  REQUESTED
+  APPROVED
+  REJECTED
+  PROCESSED
+}
+
+enum NotificationType {
+  BOOKING_CONFIRMATION
+  PAYMENT_SUCCESS
+  FLIGHT_DELAY
+  GATE_CHANGE
+  BOARDING_REMINDER
+  GENERAL
+}
+
+enum DiscountType {
+  PERCENT
+  FIXED
+}
+
+enum BaggageType {
+  CABIN
+  CHECKED
+}
+
+// ─────────────────────── Auth & Users ────────────────────────
+
+model User {
+  id              String     @id @default(cuid())
+  email           String     @unique
+  password        String
+  firstName       String
+  lastName        String
+  phone           String?
+  avatarUrl       String?
+  isEmailVerified Boolean    @default(false)
+  emailVerifyToken String?
+  passwordResetToken String?
+  passwordResetExpires DateTime?
+  status          UserStatus @default(ACTIVE)
+  roleId          String
+  role            Role       @relation(fields: [roleId], references: [id])
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  passengers    Passenger[]
+  bookings      Booking[]
+  notifications Notification[]
+  auditLogs     AuditLog[]
+
+  @@map("users")
+}
+
+model Role {
+  id          String       @id @default(cuid())
+  name        String       @unique // GUEST, CUSTOMER, TICKETING_STAFF, CHECKIN_STAFF, GATE_AGENT, FLIGHT_OPS, FINANCE, ADMIN
+  description String?
+  users       User[]
+  permissions Permission[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@map("roles")
+}
+
+model Permission {
+  id          String @id @default(cuid())
+  name        String @unique // e.g. flights:create, bookings:read
+  description String?
+  roles       Role[]
+
+  @@map("permissions")
+}
+
+// ─────────────────────── Passengers ──────────────────────────
+
+model Passenger {
+  id                  String    @id @default(cuid())
+  userId              String?
+  user                User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  firstName           String
+  lastName            String
+  dateOfBirth         DateTime
+  gender              Gender
+  nationality         String
+  passportNumber      String?
+  passportExpiry      DateTime?
+  frequentFlyerNumber String?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  bookingPassengers BookingPassenger[]
+
+  @@map("passengers")
+}
+
+// ─────────────── Airlines / Airports / Aircraft ──────────────
+
+model Airline {
+  id        String   @id @default(cuid())
+  name      String
+  iataCode  String   @unique // e.g. PR
+  icaoCode  String?  @unique
+  logoUrl   String?
+  country   String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  aircrafts      Aircraft[]
+  flights        Flight[]
+  baggageOptions Baggage[]
+
+  @@map("airlines")
+}
+
+model Airport {
+  id        String   @id @default(cuid())
+  name      String
+  iataCode  String   @unique // e.g. MNL
+  icaoCode  String?  @unique
+  city      String
+  country   String
+  timezone  String // IANA e.g. Asia/Manila
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  originRoutes      FlightRoute[] @relation("OriginAirport")
+  destinationRoutes FlightRoute[] @relation("DestinationAirport")
+
+  @@map("airports")
+}
+
+model Aircraft {
+  id           String         @id @default(cuid())
+  airlineId    String
+  airline      Airline        @relation(fields: [airlineId], references: [id])
+  model        String // e.g. Airbus A320
+  registration String         @unique // e.g. RP-C1234
+  totalSeats   Int
+  status       AircraftStatus @default(ACTIVE)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  seatLayout SeatLayout?
+  flights    Flight[]
+
+  @@map("aircrafts")
+}
+
+model SeatLayout {
+  id          String   @id @default(cuid())
+  aircraftId  String   @unique
+  aircraft    Aircraft @relation(fields: [aircraftId], references: [id], onDelete: Cascade)
+  name        String // e.g. "A320 Standard 2-class"
+  cabinConfig Json // rows/columns/aisles per cabin class
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  seats Seat[]
+
+  @@map("seat_layouts")
+}
+
+model Seat {
+  id              String     @id @default(cuid())
+  seatLayoutId    String
+  seatLayout      SeatLayout @relation(fields: [seatLayoutId], references: [id], onDelete: Cascade)
+  seatNumber      String // e.g. 12A
+  row             Int
+  column          String // A, B, C...
+  cabinClass      CabinClass @default(ECONOMY)
+  seatType        SeatType
+  isEmergencyExit Boolean    @default(false)
+  isPremium       Boolean    @default(false)
+  extraPrice      Decimal    @default(0) @db.Decimal(10, 2)
+
+  bookingPassengers BookingPassenger[]
+
+  @@unique([seatLayoutId, seatNumber])
+  @@map("seats")
+}
+
+// ─────────────────────── Flights ─────────────────────────────
+
+model FlightRoute {
+  id                   String  @id @default(cuid())
+  originAirportId      String
+  originAirport        Airport @relation("OriginAirport", fields: [originAirportId], references: [id])
+  destinationAirportId String
+  destinationAirport   Airport @relation("DestinationAirport", fields: [destinationAirportId], references: [id])
+  distanceKm           Int?
+  durationMinutes      Int
+
+  flights Flight[]
+
+  @@unique([originAirportId, destinationAirportId])
+  @@map("flight_routes")
+}
+
+model Flight {
+  id             String       @id @default(cuid())
+  flightNumber   String // e.g. PR1234
+  airlineId      String
+  airline        Airline      @relation(fields: [airlineId], references: [id])
+  aircraftId     String
+  aircraft       Aircraft     @relation(fields: [aircraftId], references: [id])
+  routeId        String
+  route          FlightRoute  @relation(fields: [routeId], references: [id])
+  departureTime  DateTime
+  arrivalTime    DateTime
+  status         FlightStatus @default(SCHEDULED)
+  gate           String?
+  terminal       String?
+  boardingTime   DateTime?
+  economyPrice   Decimal      @db.Decimal(10, 2)
+  businessPrice  Decimal?     @db.Decimal(10, 2)
+  firstClassPrice Decimal?    @db.Decimal(10, 2)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  bookings Booking[]
+
+  @@unique([flightNumber, departureTime])
+  @@index([departureTime, status])
+  @@map("flights")
+}
+
+// ─────────────────────── Bookings ────────────────────────────
+
+model Booking {
+  id               String        @id @default(cuid())
+  bookingReference String        @unique // e.g. ABC123
+  userId           String
+  user             User          @relation(fields: [userId], references: [id])
+  flightId         String
+  flight           Flight        @relation(fields: [flightId], references: [id])
+  status           BookingStatus @default(PENDING)
+  totalAmount      Decimal       @db.Decimal(10, 2)
+  contactEmail     String
+  contactPhone     String?
+  promoCodeId      String?
+  promoCode        PromoCode?    @relation(fields: [promoCodeId], references: [id])
+  expiresAt        DateTime? // pending bookings expire
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  passengers BookingPassenger[]
+  payments   Payment[]
+
+  @@index([userId, status])
+  @@map("bookings")
+}
+
+model BookingPassenger {
+  id          String     @id @default(cuid())
+  bookingId   String
+  booking     Booking    @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  passengerId String
+  passenger   Passenger  @relation(fields: [passengerId], references: [id])
+  seatId      String?
+  seat        Seat?      @relation(fields: [seatId], references: [id])
+  cabinClass  CabinClass @default(ECONOMY)
+  mealId      String?
+  meal        Meal?      @relation(fields: [mealId], references: [id])
+  baggageId   String?
+  baggage     Baggage?   @relation(fields: [baggageId], references: [id])
+  fareAmount  Decimal    @db.Decimal(10, 2)
+
+  ticket Ticket?
+
+  @@unique([bookingId, passengerId])
+  @@map("booking_passengers")
+}
+
+// ─────────────────────── Tickets ─────────────────────────────
+
+model Ticket {
+  id                 String           @id @default(cuid())
+  ticketNumber       String           @unique
+  bookingPassengerId String           @unique
+  bookingPassenger   BookingPassenger @relation(fields: [bookingPassengerId], references: [id], onDelete: Cascade)
+  status             TicketStatus     @default(ISSUED)
+  qrCodeData         String // payload encoded in QR
+  barcodeData        String
+  pdfUrl             String?
+  issuedAt           DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+
+  boardingPass BoardingPass?
+
+  @@map("tickets")
+}
+
+model BoardingPass {
+  id             String   @id @default(cuid())
+  ticketId       String   @unique
+  ticket         Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  gate           String?
+  boardingTime   DateTime
+  seatNumber     String
+  sequenceNumber Int
+  issuedAt       DateTime @default(now())
+
+  @@map("boarding_passes")
+}
+
+// ─────────────────────── Payments ────────────────────────────
+
+model Payment {
+  id            String        @id @default(cuid())
+  bookingId     String
+  booking       Booking       @relation(fields: [bookingId], references: [id])
+  amount        Decimal       @db.Decimal(10, 2)
+  currency      String        @default("PHP")
+  method        PaymentMethod
+  provider      String? // stripe | paymongo | paypal
+  transactionId String?       @unique
+  status        PaymentStatus @default(PENDING)
+  paidAt        DateTime?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  refunds Refund[]
+
+  @@map("payments")
+}
+
+model Refund {
+  id          String       @id @default(cuid())
+  paymentId   String
+  payment     Payment      @relation(fields: [paymentId], references: [id])
+  amount      Decimal      @db.Decimal(10, 2)
+  reason      String
+  status      RefundStatus @default(REQUESTED)
+  processedAt DateTime?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@map("refunds")
+}
+
+// ─────────────── Notifications & Audit ───────────────────────
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      NotificationType @default(GENERAL)
+  title     String
+  message   String
+  isRead    Boolean          @default(false)
+  createdAt DateTime         @default(now())
+
+  @@index([userId, isRead])
+  @@map("notifications")
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action    String // e.g. booking.create
+  entity    String // e.g. Booking
+  entityId  String?
+  metadata  Json?
+  ipAddress String?
+  createdAt DateTime @default(now())
+
+  @@index([entity, entityId])
+  @@map("audit_logs")
+}
+
+// ─────────────── Promos / Baggage / Meals ────────────────────
+
+model PromoCode {
+  id            String       @id @default(cuid())
+  code          String       @unique
+  description   String?
+  discountType  DiscountType
+  discountValue Decimal      @db.Decimal(10, 2)
+  maxUses       Int?
+  usedCount     Int          @default(0)
+  validFrom     DateTime
+  validUntil    DateTime
+  isActive      Boolean      @default(true)
+
+  bookings Booking[]
+
+  @@map("promo_codes")
+}
+
+model Baggage {
+  id        String      @id @default(cuid())
+  airlineId String
+  airline   Airline     @relation(fields: [airlineId], references: [id])
+  type      BaggageType
+  weightKg  Int
+  price     Decimal     @db.Decimal(10, 2)
+
+  bookingPassengers BookingPassenger[]
+
+  @@map("baggage")
+}
+
+model Meal {
+  id          String  @id @default(cuid())
+  name        String
+  description String?
+  category    String? // e.g. Vegetarian, Halal, Kids
+  price       Decimal @db.Decimal(10, 2)
+  imageUrl    String?
+  isActive    Boolean @default(true)
+
+  bookingPassengers BookingPassenger[]
+
+  @@map("meals")
+}
