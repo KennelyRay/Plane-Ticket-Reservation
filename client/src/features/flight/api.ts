@@ -1,5 +1,5 @@
 import { api } from '../../services/api';
-import type { ApiResponse, Flight, Pagination } from '../../types';
+import type { Airport, ApiResponse, Flight, Pagination } from '../../types';
 
 export interface FlightSearchParams {
   origin?: string;
@@ -22,5 +22,10 @@ export const flightApi = {
   async getById(id: string) {
     const { data } = await api.get<ApiResponse<{ flight: Flight }>>(`/flights/${id}`);
     return data.data.flight;
+  },
+
+  async airports() {
+    const { data } = await api.get<ApiResponse<{ airports: Airport[] }>>('/airports');
+    return data.data.airports;
   },
 };

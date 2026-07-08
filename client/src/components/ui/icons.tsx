@@ -49,6 +49,18 @@ export const SparkIcon = ({ className = 'w-5 h-5' }: IconProps) => (
   </svg>
 );
 
+export const XIcon = ({ className = 'w-5 h-5' }: IconProps) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" className={className} aria-hidden>
+    <path d="M6 6l12 12M18 6 6 18" />
+  </svg>
+);
+
+export const ChevronDownIcon = ({ className = 'w-5 h-5' }: IconProps) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden>
+    <path d="m6 9 6 6 6-6" />
+  </svg>
+);
+
 export const CheckInIcon = ({ className = 'w-5 h-5' }: IconProps) => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden>
     <rect x="4" y="3" width="16" height="18" rx="2" />

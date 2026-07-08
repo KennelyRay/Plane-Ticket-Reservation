@@ -4,7 +4,8 @@ import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { flightApi } from '../../features/flight/api';
 import { RETURN_LEG_KEY, type ReturnLeg } from '../../features/booking/returnLeg';
 import type { Flight } from '../../types';
-import { PlaneIcon, SearchIcon, ShieldIcon, SparkIcon, SwapIcon, TicketIcon } from '../../components/ui/icons';
+import AirportSelect from '../../components/ui/AirportSelect';
+import { PlaneIcon, SearchIcon, ShieldIcon, SparkIcon, SwapIcon, TicketIcon, XIcon } from '../../components/ui/icons';
 
 const formatTime = (iso: string) =>
   new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -29,28 +30,6 @@ const POPULAR_ROUTES: Array<[string, string, string]> = [
   ['MNL', 'SIN', 'Singapore'],
   ['MNL', 'NRT', 'Tokyo'],
 ];
-
-// City hints shown under the airport-code fields in the booking dock
-const AIRPORT_CITIES: Record<string, string> = {
-  MNL: 'Manila',
-  CEB: 'Cebu',
-  DVO: 'Davao',
-  ILO: 'Iloilo',
-  SIN: 'Singapore',
-  NRT: 'Tokyo Narita',
-  HKG: 'Hong Kong',
-  ICN: 'Seoul Incheon',
-  BKK: 'Bangkok',
-  KUL: 'Kuala Lumpur',
-  CRK: 'Clark',
-  PPS: 'Puerto Princesa',
-  TAG: 'Bohol',
-  KLO: 'Kalibo (Boracay)',
-  BCD: 'Bacolod',
-  CGY: 'Cagayan de Oro',
-};
-
-const cityFor = (code: string) => AIRPORT_CITIES[code.toUpperCase()] ?? 'Airport code';
 
 const HERO_PERKS = [
   { icon: TicketIcon, text: 'Live seat maps' },
@@ -255,6 +234,12 @@ export default function FlightSearch() {
   });
   const [airlineFilter, setAirlineFilter] = useState<string | null>(null);
 
+  const { data: airports = [] } = useQuery({
+    queryKey: ['airports'],
+    queryFn: flightApi.airports,
+    staleTime: Infinity,
+  });
+
   const { data, isLoading, isError, isPlaceholderData } = useQuery({
     queryKey: ['flights', executed.origin, executed.destination, executed.date, executed.sort, executed.page],
     queryFn: () =>
@@ -296,6 +281,13 @@ export default function FlightSearch() {
   };
 
   const setTrip = (trip: TripType) => setForm((f) => ({ ...f, trip }));
+
+  // Reset every criterion; empty origin/destination params mean "browse everything"
+  const clearSearch = () => {
+    setForm({ origin: '', destination: '', date: '', returnDate: '', trip: 'one' });
+    setAirlineFilter(null);
+    setSearchParams({ origin: '', destination: '', trip: 'one', sort: 'departure', page: '1' });
+  };
 
   const goToPage = (page: number) => {
     applySearch({ page });
@@ -360,9 +352,6 @@ export default function FlightSearch() {
     f.id === highlights.cheapestId ? 'cheapest' : f.id === highlights.fastestId ? 'fastest' : undefined;
 
   const pagination = data?.pagination;
-
-  const dockFieldClass =
-    'w-full h-8 bg-transparent text-xl font-extrabold tracking-tight text-ink placeholder:text-slate-300 focus:outline-none';
 
   return (
     <div className="space-y-8">
@@ -450,9 +439,19 @@ export default function FlightSearch() {
               </button>
             ))}
           </div>
-          <span className="hidden sm:block text-[11px] font-semibold text-ink-soft">
-            All fares in ₱ PHP · taxes included
-          </span>
+          <div className="flex items-center gap-4">
+            <span className="hidden sm:block text-[11px] font-semibold text-ink-soft">
+              All fares in ₱ PHP · taxes included
+            </span>
+            <button
+              type="button"
+              onClick={clearSearch}
+              className="inline-flex items-center gap-1.5 px-3 h-8 rounded-lg text-xs font-bold text-ink-soft border border-slate-200 hover:border-red-200 hover:text-red-600 hover:bg-red-50/60 transition-colors"
+            >
+              <XIcon className="w-3.5 h-3.5" />
+              Clear search
+            </button>
+          </div>
         </div>
 
         {/* Segmented field bar */}
@@ -464,17 +463,13 @@ export default function FlightSearch() {
           }`}
         >
           <div className="relative px-4 sm:px-5 py-3.5 focus-within:bg-brand-50/40 transition-colors">
-            <label className={dockLabelClass}>From</label>
-            <input
+            <AirportSelect
+              label="From"
               value={form.origin}
-              onChange={(e) => setForm({ ...form, origin: e.target.value.toUpperCase() })}
-              className={dockFieldClass}
-              placeholder="MNL"
-              maxLength={3}
+              onChange={(origin) => setForm((f) => ({ ...f, origin }))}
+              airports={airports}
+              hintClass="text-brand-600/80"
             />
-            <p className="text-[11px] font-semibold text-brand-600/80 truncate">
-              {cityFor(form.origin)}
-            </p>
             <button
               type="button"
               onClick={swap}
@@ -485,18 +480,15 @@ export default function FlightSearch() {
             </button>
           </div>
 
-          <div className="px-4 sm:px-5 py-3.5 pl-8 sm:pl-9 border-l border-slate-100 focus-within:bg-brand-50/40 transition-colors">
-            <label className={dockLabelClass}>To</label>
-            <input
+          <div className="relative px-4 sm:px-5 py-3.5 pl-8 sm:pl-9 border-l border-slate-100 focus-within:bg-brand-50/40 transition-colors">
+            <AirportSelect
+              label="To"
               value={form.destination}
-              onChange={(e) => setForm({ ...form, destination: e.target.value.toUpperCase() })}
-              className={dockFieldClass}
-              placeholder="CEB"
-              maxLength={3}
+              onChange={(destination) => setForm((f) => ({ ...f, destination }))}
+              airports={airports}
+              hintClass="text-violet-glow/80"
+              align="right"
             />
-            <p className="text-[11px] font-semibold text-violet-glow/80 truncate">
-              {cityFor(form.destination)}
-            </p>
           </div>
 
           <div className="px-4 sm:px-5 py-3.5 border-t lg:border-t-0 lg:border-l border-slate-100 focus-within:bg-brand-50/40 transition-colors">
@@ -628,6 +620,23 @@ export default function FlightSearch() {
             <p className="text-sm text-ink-soft mt-1">
               Try different airports or another date — popular routes always have seats.
             </p>
+            <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
+              {POPULAR_ROUTES.slice(0, 4).map(([o, d, city]) => (
+                <button
+                  key={`${o}${d}`}
+                  onClick={() => pickRoute(o, d)}
+                  className="px-3.5 py-2 rounded-xl text-xs font-bold border border-slate-200 bg-white text-ink-soft hover:border-brand-300 hover:text-brand-700 transition-colors"
+                >
+                  {o} → {city}
+                </button>
+              ))}
+              <button
+                onClick={clearSearch}
+                className="px-3.5 py-2 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-brand-600 to-violet-glow shadow-soft hover:shadow-lift transition-all"
+              >
+                Browse all flights
+              </button>
+            </div>
           </div>
         )}
 
