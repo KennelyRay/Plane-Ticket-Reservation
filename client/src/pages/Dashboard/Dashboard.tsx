@@ -21,10 +21,11 @@ export default function Dashboard() {
       gradient: 'from-brand-600 to-violet-glow',
     },
     {
+      to: '/bookings',
       icon: TicketIcon,
       title: 'My bookings',
       text: 'Tickets, receipts and trip history',
-      live: false,
+      live: true,
       gradient: 'from-sky-500 to-brand-600',
     },
     {

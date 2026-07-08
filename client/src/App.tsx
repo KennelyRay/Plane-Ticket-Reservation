@@ -5,6 +5,9 @@ import Login from './pages/Auth/Login';
 import Register from './pages/Auth/Register';
 import FlightSearch from './pages/Flights/FlightSearch';
 import SeatSelection from './pages/Booking/SeatSelection';
+import PassengerDetails from './pages/Booking/PassengerDetails';
+import BookingDetail from './pages/Booking/BookingDetail';
+import MyBookings from './pages/Booking/MyBookings';
 import Dashboard from './pages/Dashboard/Dashboard';
 import AdminDashboard from './pages/Admin/AdminDashboard';
 
@@ -21,6 +24,9 @@ export default function App() {
           <Route element={<ProtectedRoute />}>
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/flights/:flightId/seats" element={<SeatSelection />} />
+            <Route path="/flights/:flightId/passengers" element={<PassengerDetails />} />
+            <Route path="/bookings" element={<MyBookings />} />
+            <Route path="/bookings/:bookingId" element={<BookingDetail />} />
           </Route>
 
           <Route element={<ProtectedRoute roles={['ADMIN']} />}>

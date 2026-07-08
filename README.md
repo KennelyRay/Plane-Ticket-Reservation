@@ -49,6 +49,10 @@ npm run dev            # http://localhost:5173 (proxies /api + /socket.io to :50
 | `GET /api/seats/flight/:flightId` | Seat map with live availability (AVAILABLE / LOCKED / BOOKED) |
 | `POST /api/seats/lock` | Hold a seat for 5 min (auth required) |
 | `POST /api/seats/release` | Release your held seat (auth required) |
+| `POST /api/bookings` | Book held seats with passenger details (auth required) |
+| `GET /api/bookings` | List my bookings (auth required) |
+| `GET /api/bookings/:id` | Booking detail — owner or admin (auth required) |
+| `POST /api/bookings/:id/cancel` | Cancel a booking, freeing its seats (auth required) |
 
 ## Backend pattern
 
@@ -88,9 +92,18 @@ Seats are held for **5 minutes** when selected. Locks live in Redis when
 | `NODE_ENV` | `production` |
 | `REDIS_URL` | from a Railway Redis service: `${{Redis.REDIS_URL}}` |
 
+## Booking flow
+
+Seat selection → passenger details → confirmed booking (reference like
+`VF-8KD3QT`). Fares are computed server-side (cabin base price + seat fee)
+and seats are re-validated against the caller's live locks before the
+booking is created. Booked seats broadcast `seat:booked`; cancelling a
+booking frees its seats and broadcasts `seat:released`. Bookings confirm
+immediately — payment capture lands with the payments module.
+
 ## Roadmap (next modules)
 
-- Booking flow (passengers, meals, baggage, promo codes)
+- Booking extras (meals, baggage, promo codes)
 - Payments (Stripe/PayMongo)
 - Ticket PDF + QR generation, email delivery
 - Check-in & boarding passes

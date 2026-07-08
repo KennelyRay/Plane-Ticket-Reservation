@@ -1,11 +1,12 @@
-import { useEffect, useMemo, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useMemo, useState } from 'react';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { isAxiosError } from 'axios';
 import { seatApi, type SeatMapSeat } from '../../features/seat/api';
 import { useSeatSocket } from '../../hooks/useSeatSocket';
 import SeatMap from '../../components/seatmap/SeatMap';
-import { ClockIcon, PlaneIcon } from '../../components/ui/icons';
+import LockCountdown from '../../components/booking/LockCountdown';
+import { PlaneIcon } from '../../components/ui/icons';
 
 const formatTime = (iso: string) =>
   new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -13,39 +14,9 @@ const formatTime = (iso: string) =>
 const formatDate = (iso: string) =>
   new Date(iso).toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
 
-function LockCountdown({ expiresAt, onExpire }: { expiresAt: number; onExpire: () => void }) {
-  const [remaining, setRemaining] = useState(() => Math.max(0, expiresAt - Date.now()));
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const left = Math.max(0, expiresAt - Date.now());
-      setRemaining(left);
-      if (left <= 0) {
-        clearInterval(interval);
-        onExpire();
-      }
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [expiresAt, onExpire]);
-
-  const minutes = Math.floor(remaining / 60000);
-  const seconds = Math.floor((remaining % 60000) / 1000);
-  const urgent = remaining < 60000;
-
-  return (
-    <span
-      className={`inline-flex items-center gap-1.5 font-mono font-bold tabular-nums ${
-        urgent ? 'text-red-600' : 'text-brand-800'
-      }`}
-    >
-      <ClockIcon className="w-4 h-4" />
-      {minutes}:{String(seconds).padStart(2, '0')}
-    </span>
-  );
-}
-
 export default function SeatSelection() {
   const { flightId } = useParams<{ flightId: string }>();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [error, setError] = useState<string | null>(null);
 
@@ -206,8 +177,9 @@ export default function SeatSelection() {
             </div>
             <button
               disabled={mySeats.length === 0}
+              onClick={() => navigate(`/flights/${flightId}/passengers`)}
               className="h-12 px-6 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-brand-600 to-violet-glow shadow-soft hover:shadow-lift hover:opacity-95 active:scale-[0.99] transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-              title="Passenger details — next module"
+              title="Continue to passenger details"
             >
               Continue
             </button>

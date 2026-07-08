@@ -49,6 +49,9 @@ export default function MainLayout() {
                 <NavLink to="/dashboard" className={navLinkClass}>
                   Dashboard
                 </NavLink>
+                <NavLink to="/bookings" className={navLinkClass}>
+                  Bookings
+                </NavLink>
                 {user.role === 'ADMIN' && (
                   <NavLink to="/admin" className={navLinkClass}>
                     Admin
