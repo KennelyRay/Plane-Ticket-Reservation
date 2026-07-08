@@ -124,6 +124,18 @@ const ROUTES: Array<[string, string, number, number]> = [
 const COORDS: Record<string, [number, number]> = {
   MNL: [14.508, 121.019],
   CEB: [10.307, 123.979],
+  DVO: [7.125, 125.646],
+  ILO: [10.833, 122.493],
+  CRK: [15.186, 120.56],
+  TAG: [9.574, 123.771],
+  KLO: [11.679, 122.376],
+  BCD: [10.776, 123.015],
+  SIN: [1.364, 103.991],
+  NRT: [35.772, 140.393],
+  HKG: [22.308, 113.918],
+  ICN: [37.469, 126.451],
+  BKK: [13.69, 100.75],
+  KUL: [2.746, 101.71],
   ZAM: [6.922, 122.06],
   GES: [6.058, 125.096],
   LAO: [18.178, 120.532],
@@ -259,7 +271,13 @@ async function main() {
 
   console.log('Seeding airports...');
   for (const airport of AIRPORTS) {
-    await prisma.airport.upsert({ where: { iataCode: airport.iataCode }, update: {}, create: airport });
+    const [latitude, longitude] = COORDS[airport.iataCode] ?? [undefined, undefined];
+    await prisma.airport.upsert({
+      where: { iataCode: airport.iataCode },
+      // Re-running the seed backfills coordinates onto existing rows
+      update: { latitude, longitude },
+      create: { ...airport, latitude, longitude },
+    });
   }
 
   console.log('Seeding airlines...');

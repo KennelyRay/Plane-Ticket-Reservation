@@ -3,8 +3,9 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { flightApi } from '../../features/flight/api';
 import { RETURN_LEG_KEY, type ReturnLeg } from '../../features/booking/returnLeg';
-import type { Flight } from '../../types';
+import type { Airport, Flight } from '../../types';
 import AirportSelect from '../../components/ui/AirportSelect';
+import FlightPathMap from '../../components/flights/FlightPathMap';
 import { PlaneIcon, SearchIcon, ShieldIcon, SparkIcon, SwapIcon, TicketIcon, XIcon } from '../../components/ui/icons';
 
 const formatTime = (iso: string) =>
@@ -70,20 +71,48 @@ function FlightCard({
   flight,
   index,
   badge,
+  airports,
   onSelect,
 }: {
   flight: Flight;
   index: number;
   badge?: Badge;
+  airports: Airport[];
   onSelect: (flight: Flight) => void;
 }) {
   const { route, airline } = flight;
+  const hasPath =
+    route.originAirport.latitude != null && route.destinationAirport.latitude != null;
 
   return (
     <article
       className="group relative bg-white rounded-2xl border border-slate-200/80 shadow-soft hover:shadow-lift hover:border-brand-200 hover:-translate-y-0.5 transition-all duration-300 animate-fade-up"
       style={{ animationDelay: `${Math.min(index, 8) * 60}ms` }}
     >
+      {/* Route-map preview, revealed on hover (desktop only) */}
+      {hasPath && (
+        <div className="pointer-events-none hidden lg:block absolute left-1/2 -translate-x-1/2 bottom-full mb-2 z-30 opacity-0 invisible translate-y-2 scale-95 group-hover:opacity-100 group-hover:visible group-hover:translate-y-0 group-hover:scale-100 transition-all duration-200 origin-bottom">
+          <div className="relative bg-white rounded-2xl border border-slate-200/80 shadow-lift p-2.5">
+            <FlightPathMap
+              airports={airports}
+              origin={route.originAirport}
+              destination={route.destinationAirport}
+            />
+            <div className="flex items-center justify-between gap-4 px-1.5 pt-2 pb-0.5">
+              <span className="text-xs font-bold text-ink truncate">
+                {route.originAirport.city} → {route.destinationAirport.city}
+              </span>
+              <span className="text-[11px] font-semibold text-ink-soft shrink-0">
+                {route.distanceKm
+                  ? `${Number(route.distanceKm).toLocaleString()} km · direct`
+                  : 'Direct'}
+              </span>
+            </div>
+            <span className="absolute left-1/2 -translate-x-1/2 -bottom-1.5 w-3 h-3 rotate-45 bg-white border-r border-b border-slate-200/80" />
+          </div>
+        </div>
+      )}
+
       <div className="flex flex-col lg:flex-row lg:items-stretch">
         {/* Journey panel */}
         <div className="flex-1 min-w-0 p-5 sm:p-6">
@@ -750,6 +779,7 @@ export default function FlightSearch() {
                   flight={flight}
                   index={i}
                   badge={badgeFor(flight)}
+                  airports={airports}
                   onSelect={selectFlight}
                 />
               ))}
