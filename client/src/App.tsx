@@ -1,6 +1,7 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import MainLayout from './components/layouts/MainLayout';
 import ProtectedRoute from './routes/ProtectedRoute';
+import Landing from './pages/Landing/Landing';
 import Login from './pages/Auth/Login';
 import Register from './pages/Auth/Register';
 import FlightSearch from './pages/Flights/FlightSearch';
@@ -18,7 +19,7 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         <Route element={<MainLayout />}>
-          <Route index element={<Navigate to="/flights" replace />} />
+          <Route index element={<Landing />} />
           <Route path="/flights" element={<FlightSearch />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
