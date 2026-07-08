@@ -1,12 +1,14 @@
 import { Server as HttpServer } from 'http';
 import { Server } from 'socket.io';
-import { env } from '../config/env';
 
 let io: Server | null = null;
 
 export const initSocket = (httpServer: HttpServer) => {
   io = new Server(httpServer, {
-    cors: { origin: env.clientUrls, credentials: true },
+    // Seat events carry only public seat ids and the socket never sees
+    // credentials, so reflect any origin rather than pinning CLIENT_URL —
+    // a mismatch (trailing slash, preview deploys) silently kills live updates.
+    cors: { origin: true },
   });
 
   io.on('connection', (socket) => {

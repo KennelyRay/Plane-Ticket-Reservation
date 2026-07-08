@@ -142,7 +142,7 @@ export default function SeatMap({ seats, onSeatClick, busySeatId }: SeatMapProps
                               {seat ? (
                                 <button
                                   type="button"
-                                  title={`${seat.seatNumber} · ${seat.seatType.toLowerCase()}${Number(seat.extraPrice) > 0 ? ` · +₱${Number(seat.extraPrice)}` : ''}`}
+                                  title={`${seat.seatNumber} · ${seat.seatType.toLowerCase()} · +₱${Number(seat.extraPrice).toLocaleString()}`}
                                   className={seatClasses(seat, seat.id === busySeatId)}
                                   disabled={
                                     seat.status === 'BOOKED' ||

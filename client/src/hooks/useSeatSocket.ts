@@ -14,14 +14,19 @@ export function useSeatSocket(flightId: string | undefined) {
 
     // Same origin in dev (Vite proxies /socket.io); the API server's origin in production
     const apiUrl = import.meta.env.VITE_API_URL as string | undefined;
-    const socket = apiUrl?.startsWith('http')
-      ? io(new URL(apiUrl).origin, { withCredentials: true })
-      : io({ withCredentials: true });
-    socket.emit('seatmap:join', flightId);
+    const socket = apiUrl?.startsWith('http') ? io(new URL(apiUrl).origin) : io();
 
     const refresh = () => {
       queryClient.invalidateQueries({ queryKey: ['seatmap', flightId] });
     };
+
+    // Join on every (re)connect — reconnects wipe room membership server-side,
+    // and events emitted while disconnected were missed, so refetch too.
+    socket.on('connect', () => {
+      socket.emit('seatmap:join', flightId);
+      refresh();
+    });
+
     socket.on('seat:locked', refresh);
     socket.on('seat:released', refresh);
     socket.on('seat:booked', refresh);

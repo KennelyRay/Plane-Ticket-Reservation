@@ -47,22 +47,30 @@ async function seedSeats(seatLayoutId: string) {
   const seatTypeFor = (col: string): SeatType =>
     col === 'A' || col === 'F' ? 'WINDOW' : col === 'C' || col === 'D' ? 'AISLE' : 'MIDDLE';
 
+  // Every seat carries a selection fee — no free seats
+  const extraPriceFor = (cabinClass: CabinClass, seatType: SeatType, isPremium: boolean) => {
+    if (cabinClass === 'BUSINESS') return 500;
+    if (isPremium) return 350;
+    return seatType === 'WINDOW' ? 200 : seatType === 'AISLE' ? 150 : 100;
+  };
+
   const seats = [];
   for (let row = 1; row <= 30; row++) {
     const cabinClass: CabinClass = row <= 4 ? 'BUSINESS' : 'ECONOMY';
     const isEmergencyExit = row === 13;
     const isPremium = row <= 4 || row === 5 || isEmergencyExit;
     for (const col of columns) {
+      const seatType = seatTypeFor(col);
       seats.push({
         seatLayoutId,
         seatNumber: `${row}${col}`,
         row,
         column: col,
         cabinClass,
-        seatType: seatTypeFor(col),
+        seatType,
         isEmergencyExit,
         isPremium,
-        extraPrice: isPremium && cabinClass === 'ECONOMY' ? 350 : 0,
+        extraPrice: extraPriceFor(cabinClass, seatType, isPremium),
       });
     }
   }

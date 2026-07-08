@@ -150,8 +150,7 @@ export default function SeatSelection() {
                     <span className="text-xs font-semibold text-ink capitalize leading-tight">
                       {seat.cabinClass === 'BUSINESS' ? 'Business' : 'Economy'}
                       <span className="block text-[10px] font-medium text-ink-soft">
-                        {seat.seatType.toLowerCase()} ·{' '}
-                        {Number(seat.extraPrice) > 0 ? `+₱${Number(seat.extraPrice)}` : 'free'}
+                        {seat.seatType.toLowerCase()} · +₱{Number(seat.extraPrice).toLocaleString()}
                       </span>
                     </span>
                   </li>
