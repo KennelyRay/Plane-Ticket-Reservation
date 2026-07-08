@@ -3,8 +3,12 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { isAxiosError } from 'axios';
 import { useState } from 'react';
 import { bookingApi, type BookingStatus } from '../../features/booking/api';
+import { readReturnLeg, clearReturnLeg } from '../../features/booking/returnLeg';
 import LockCountdown from '../../components/booking/LockCountdown';
-import { PlaneIcon, TicketIcon } from '../../components/ui/icons';
+import BoardingPassCard from '../../components/booking/BoardingPassCard';
+import { CheckInIcon, PlaneIcon, TicketIcon } from '../../components/ui/icons';
+
+const CHECKIN_OPENS_HOURS_BEFORE = 24;
 
 const formatTime = (iso: string) =>
   new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -31,6 +35,21 @@ export default function BookingDetail() {
     queryKey: ['booking', bookingId],
     queryFn: () => bookingApi.get(bookingId!),
     enabled: !!bookingId,
+  });
+
+  const checkinMutation = useMutation({
+    mutationFn: () => bookingApi.checkIn(bookingId!),
+    onSuccess: (updated) => {
+      queryClient.setQueryData(['booking', bookingId], updated);
+      queryClient.invalidateQueries({ queryKey: ['bookings'] });
+    },
+    onError: (err) => {
+      setCancelError(
+        isAxiosError(err)
+          ? err.response?.data?.message ?? 'Check-in failed'
+          : 'Check-in failed'
+      );
+    },
   });
 
   const cancelMutation = useMutation({
@@ -72,6 +91,17 @@ export default function BookingDetail() {
   const cancellable =
     (booking.status === 'CONFIRMED' || booking.status === 'PENDING') && !departed;
 
+  const returnLeg = readReturnLeg();
+  const offerReturn =
+    justPaid && booking.status === 'CONFIRMED' && returnLeg?.outboundFlightId === flight.id;
+
+  const checkedIn = booking.passengers.every((p) => p.ticket?.status === 'CHECKED_IN');
+  const checkinOpensAt = new Date(
+    new Date(flight.departureTime).getTime() - CHECKIN_OPENS_HOURS_BEFORE * 60 * 60 * 1000
+  );
+  const checkinOpen = new Date() >= checkinOpensAt && !departed;
+  const canCheckIn = booking.status === 'CONFIRMED' && !checkedIn && !departed;
+
   return (
     <div className="space-y-6 animate-fade-up max-w-3xl mx-auto">
       <Link
@@ -86,6 +116,28 @@ export default function BookingDetail() {
           🎉 Payment successful — booking confirmed! Your reference is{' '}
           <span className="font-extrabold">{booking.bookingReference}</span> — keep it handy for
           check-in.
+        </div>
+      )}
+
+      {offerReturn && returnLeg && (
+        <div className="p-4 rounded-2xl bg-brand-50 border border-brand-100 text-brand-800 text-sm font-semibold animate-fade-in flex flex-wrap items-center gap-3">
+          <span className="flex-1 min-w-0">
+            ✈️ Outbound booked! Now grab your return flight — {returnLeg.origin} →{' '}
+            {returnLeg.destination} on{' '}
+            {new Date(returnLeg.date).toLocaleDateString([], {
+              weekday: 'short',
+              month: 'short',
+              day: 'numeric',
+            })}
+            .
+          </span>
+          <Link
+            to={`/flights?origin=${returnLeg.origin}&destination=${returnLeg.destination}&date=${returnLeg.date}&trip=one&sort=departure&page=1`}
+            onClick={clearReturnLeg}
+            className="h-10 px-5 inline-flex items-center rounded-xl text-sm font-bold text-white bg-gradient-to-r from-brand-600 to-violet-glow shadow-soft hover:shadow-lift transition-all shrink-0"
+          >
+            Book return flight →
+          </Link>
         </div>
       )}
 
@@ -210,6 +262,52 @@ export default function BookingDetail() {
           </p>
         )}
       </div>
+
+      {/* Online check-in */}
+      {booking.status === 'CONFIRMED' && !departed && (
+        <div className="space-y-4">
+          {checkedIn ? (
+            <>
+              <h2 className="font-extrabold tracking-tight flex items-center gap-2">
+                <CheckInIcon className="w-4 h-4 text-emerald-500" />
+                Boarding passes
+              </h2>
+              {booking.passengers
+                .filter((bp) => bp.ticket?.boardingPass)
+                .map((bp) => (
+                  <BoardingPassCard key={bp.id} booking={booking} bp={bp} />
+                ))}
+            </>
+          ) : canCheckIn ? (
+            <div className="bg-white rounded-2xl border border-slate-200/80 shadow-soft p-5 sm:p-6 flex flex-wrap items-center gap-4">
+              <span className="w-11 h-11 rounded-xl bg-gradient-to-br from-violet-glow to-fuchsia-500 text-white flex items-center justify-center">
+                <CheckInIcon className="w-5 h-5" />
+              </span>
+              <div className="flex-1 min-w-0">
+                <p className="font-extrabold tracking-tight">Online check-in</p>
+                <p className="text-xs font-medium text-ink-soft mt-0.5">
+                  {checkinOpen
+                    ? 'Check in now and skip the counter — boarding passes are issued instantly.'
+                    : `Opens ${checkinOpensAt.toLocaleString([], {
+                        weekday: 'short',
+                        month: 'short',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })} (24h before departure).`}
+                </p>
+              </div>
+              <button
+                onClick={() => checkinMutation.mutate()}
+                disabled={!checkinOpen || checkinMutation.isPending}
+                className="h-11 px-6 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-brand-600 to-violet-glow shadow-soft hover:shadow-lift hover:opacity-95 active:scale-[0.99] transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                {checkinMutation.isPending ? 'Checking in…' : 'Check in now'}
+              </button>
+            </div>
+          ) : null}
+        </div>
+      )}
 
       {/* Contact + actions */}
       <div className="bg-white rounded-2xl border border-slate-200/80 shadow-soft p-5 sm:p-6 flex flex-wrap items-center gap-4">

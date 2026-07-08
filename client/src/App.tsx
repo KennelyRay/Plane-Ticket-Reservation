@@ -9,6 +9,7 @@ import PassengerDetails from './pages/Booking/PassengerDetails';
 import BookingDetail from './pages/Booking/BookingDetail';
 import Payment from './pages/Booking/Payment';
 import MyBookings from './pages/Booking/MyBookings';
+import CheckIn from './pages/Booking/CheckIn';
 import Dashboard from './pages/Dashboard/Dashboard';
 import AdminDashboard from './pages/Admin/AdminDashboard';
 
@@ -29,6 +30,7 @@ export default function App() {
             <Route path="/bookings" element={<MyBookings />} />
             <Route path="/bookings/:bookingId" element={<BookingDetail />} />
             <Route path="/bookings/:bookingId/pay" element={<Payment />} />
+            <Route path="/check-in" element={<CheckIn />} />
           </Route>
 
           <Route element={<ProtectedRoute roles={['ADMIN']} />}>

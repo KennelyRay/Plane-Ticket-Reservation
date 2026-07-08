@@ -150,10 +150,11 @@ export default function Dashboard() {
       gradient: 'from-sky-500 to-brand-600',
     },
     {
+      to: '/check-in',
       icon: CheckInIcon,
       title: 'Online check-in',
       text: 'Skip the counter, get your boarding pass',
-      live: false,
+      live: true,
       gradient: 'from-violet-glow to-fuchsia-500',
     },
   ];

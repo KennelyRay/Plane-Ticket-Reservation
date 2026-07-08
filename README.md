@@ -44,7 +44,7 @@ npm run dev            # http://localhost:5173 (proxies /api + /socket.io to :50
 | `POST /api/auth/refresh` | Rotate tokens via refresh cookie |
 | `POST /api/auth/logout` | Clear refresh cookie |
 | `GET /api/auth/me` | Current user (Bearer token) |
-| `GET /api/flights?origin=MNL&destination=CEB&date=YYYY-MM-DD` | Search flights (paginated) |
+| `GET /api/flights?origin=MNL&destination=CEB&date=YYYY-MM-DD&sort=price` | Search flights (paginated; sort: `departure` / `price` / `duration`) |
 | `GET /api/flights/:id` | Flight details |
 | `GET /api/seats/flight/:flightId` | Seat map with live availability (AVAILABLE / LOCKED / BOOKED) |
 | `POST /api/seats/lock` | Hold a seat for 5 min (auth required) |
@@ -54,6 +54,7 @@ npm run dev            # http://localhost:5173 (proxies /api + /socket.io to :50
 | `GET /api/bookings/:id` | Booking detail — owner or admin (auth required) |
 | `POST /api/bookings/:id/cancel` | Cancel a booking, freeing its seats (auth required) |
 | `POST /api/payments` | Pay a pending booking — demo gateway (auth required) |
+| `POST /api/checkin/:bookingId` | Online check-in → tickets + boarding passes (auth required) |
 
 ## Backend pattern
 
@@ -105,10 +106,15 @@ confirms it, while unpaid bookings lapse to `EXPIRED` and their seats
 free up automatically. Booked seats broadcast `seat:booked`; cancelling
 frees seats and broadcasts `seat:released`.
 
+**Round trips**: the flights page offers one-way / round-trip search; after
+the outbound booking is paid, the app hands the prefilled return-leg search
+back to the user (each leg is its own booking). **Online check-in** opens
+24 hours before departure on confirmed bookings and issues `CHECKED_IN`
+tickets plus boarding passes (seat, gate, boarding time, sequence).
+
 ## Roadmap (next modules)
 
 - Booking extras (meals, baggage, promo codes)
 - Real payment capture (Stripe/PayMongo) behind the demo gateway
-- Ticket PDF + QR generation, email delivery
-- Check-in & boarding passes
+- Ticket PDF + real QR generation, email delivery
 - Admin dashboard, reports, audit logs

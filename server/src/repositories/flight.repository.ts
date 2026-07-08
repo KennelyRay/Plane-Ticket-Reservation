@@ -9,11 +9,20 @@ const flightInclude = {
   },
 } satisfies Prisma.FlightInclude;
 
+export type FlightSortKey = 'departure' | 'price' | 'duration';
+
+const sortOrder: Record<FlightSortKey, Prisma.FlightOrderByWithRelationInput> = {
+  departure: { departureTime: 'asc' },
+  price: { economyPrice: 'asc' },
+  duration: { route: { durationMinutes: 'asc' } },
+};
+
 export const flightRepository = {
   search(params: {
     originIata?: string;
     destinationIata?: string;
     date?: Date;
+    sort: FlightSortKey;
     page: number;
     pageSize: number;
   }) {
@@ -42,7 +51,7 @@ export const flightRepository = {
       prisma.flight.findMany({
         where,
         include: flightInclude,
-        orderBy: { departureTime: 'asc' },
+        orderBy: [sortOrder[params.sort], { departureTime: 'asc' }],
         skip: (params.page - 1) * params.pageSize,
         take: params.pageSize,
       }),

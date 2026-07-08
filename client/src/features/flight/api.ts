@@ -5,6 +5,7 @@ export interface FlightSearchParams {
   origin?: string;
   destination?: string;
   date?: string;
+  sort?: 'departure' | 'price' | 'duration';
   page?: number;
   pageSize?: number;
 }

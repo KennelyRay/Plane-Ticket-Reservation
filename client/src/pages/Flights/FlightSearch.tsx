@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
-import { flightApi, type FlightSearchParams } from '../../features/flight/api';
+import { flightApi } from '../../features/flight/api';
+import { RETURN_LEG_KEY, type ReturnLeg } from '../../features/booking/returnLeg';
 import type { Flight } from '../../types';
 import { PlaneIcon, SearchIcon, SwapIcon } from '../../components/ui/icons';
 
@@ -13,6 +14,13 @@ const formatDate = (iso: string) =>
 
 const formatDuration = (minutes: number) => `${Math.floor(minutes / 60)}h ${minutes % 60}m`;
 
+const toISODate = (d: Date) => {
+  const local = new Date(d.getTime() - d.getTimezoneOffset() * 60000);
+  return local.toISOString().slice(0, 10);
+};
+
+const todayISO = () => toISODate(new Date());
+
 const POPULAR_ROUTES: Array<[string, string, string]> = [
   ['MNL', 'CEB', 'Cebu'],
   ['MNL', 'DVO', 'Davao'],
@@ -22,6 +30,7 @@ const POPULAR_ROUTES: Array<[string, string, string]> = [
 ];
 
 type SortKey = 'departure' | 'price' | 'duration';
+type TripType = 'one' | 'round';
 
 const SORTS: { id: SortKey; label: string }[] = [
   { id: 'departure', label: 'Departure time' },
@@ -32,9 +41,18 @@ const SORTS: { id: SortKey; label: string }[] = [
 const fieldClass =
   'w-full h-12 px-3.5 rounded-xl border border-slate-200 bg-white text-[15px] font-semibold text-ink placeholder:text-slate-300 placeholder:font-medium focus:outline-none focus:ring-2 focus:ring-brand-500/60 focus:border-brand-400 transition-shadow';
 
-function FlightCard({ flight, index }: { flight: Flight; index: number }) {
+const labelClass = 'block text-[11px] font-bold uppercase tracking-wide text-ink-soft mb-1.5';
+
+function FlightCard({
+  flight,
+  index,
+  onSelect,
+}: {
+  flight: Flight;
+  index: number;
+  onSelect: (flight: Flight) => void;
+}) {
   const { route, airline } = flight;
-  const navigate = useNavigate();
 
   return (
     <div
@@ -99,7 +117,7 @@ function FlightCard({ flight, index }: { flight: Flight; index: number }) {
             )}
           </div>
           <button
-            onClick={() => navigate(`/flights/${flight.id}/seats`)}
+            onClick={() => onSelect(flight)}
             className="px-5 h-11 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-brand-600 to-violet-glow shadow-soft hover:shadow-lift hover:opacity-95 active:scale-[0.98] transition-all"
           >
             Select seats
@@ -126,47 +144,110 @@ function SkeletonCard() {
 }
 
 export default function FlightSearch() {
-  const [form, setForm] = useState({ origin: 'MNL', destination: 'CEB', date: '' });
-  const [params, setParams] = useState<FlightSearchParams | null>({ origin: 'MNL', destination: 'CEB' });
-  const [sort, setSort] = useState<SortKey>('departure');
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // The URL is the source of truth for the executed search (deep-linkable);
+  // the form is a draft initialized from it.
+  const executed = {
+    origin: searchParams.get('origin') ?? 'MNL',
+    destination: searchParams.get('destination') ?? 'CEB',
+    date: searchParams.get('date') ?? '',
+    returnDate: searchParams.get('return') ?? '',
+    trip: (searchParams.get('trip') === 'round' ? 'round' : 'one') as TripType,
+    sort: (SORTS.some((s) => s.id === searchParams.get('sort'))
+      ? searchParams.get('sort')
+      : 'departure') as SortKey,
+    page: Math.max(1, Number(searchParams.get('page')) || 1),
+  };
+
+  const [form, setForm] = useState({
+    origin: executed.origin,
+    destination: executed.destination,
+    date: executed.date,
+    returnDate: executed.returnDate,
+    trip: executed.trip,
+  });
   const [airlineFilter, setAirlineFilter] = useState<string | null>(null);
 
   const { data, isLoading, isError, isPlaceholderData } = useQuery({
-    queryKey: ['flights', params],
-    queryFn: () => flightApi.search(params!),
-    enabled: !!params,
+    queryKey: ['flights', executed.origin, executed.destination, executed.date, executed.sort, executed.page],
+    queryFn: () =>
+      flightApi.search({
+        origin: executed.origin || undefined,
+        destination: executed.destination || undefined,
+        date: executed.date || undefined,
+        sort: executed.sort,
+        page: executed.page,
+      }),
     placeholderData: keepPreviousData,
   });
 
-  const search = (origin: string, destination: string, date: string) => {
+  const applySearch = (next: Partial<typeof form> & { sort?: SortKey; page?: number }) => {
+    const merged = { ...form, ...next };
     setAirlineFilter(null);
-    setParams({
-      origin: origin || undefined,
-      destination: destination || undefined,
-      date: date || undefined,
-      page: 1,
-    });
+    const params: Record<string, string> = {
+      origin: merged.origin,
+      destination: merged.destination,
+      trip: merged.trip,
+      sort: next.sort ?? executed.sort,
+      page: String(next.page ?? 1),
+    };
+    if (merged.date) params.date = merged.date;
+    if (merged.trip === 'round' && merged.returnDate) params.return = merged.returnDate;
+    setSearchParams(params);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    search(form.origin, form.destination, form.date);
+    applySearch({});
   };
 
-  const swap = () =>
-    setForm((f) => ({ ...f, origin: f.destination, destination: f.origin }));
+  const swap = () => setForm((f) => ({ ...f, origin: f.destination, destination: f.origin }));
 
   const pickRoute = (origin: string, destination: string) => {
     setForm((f) => ({ ...f, origin, destination }));
-    search(origin, destination, form.date);
+    applySearch({ origin, destination });
   };
 
+  const setTrip = (trip: TripType) => setForm((f) => ({ ...f, trip }));
+
   const goToPage = (page: number) => {
-    setParams((p) => ({ ...p, page }));
+    applySearch({ page });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // Airlines present in the current results (for the filter chips)
+  // Hand the return leg to the booking flow: after the outbound is paid,
+  // the booking page offers this search back to the user.
+  const selectFlight = (flight: Flight) => {
+    if (executed.trip === 'round' && executed.returnDate) {
+      const leg: ReturnLeg = {
+        origin: executed.destination,
+        destination: executed.origin,
+        date: executed.returnDate,
+        outboundFlightId: flight.id,
+      };
+      sessionStorage.setItem(RETURN_LEG_KEY, JSON.stringify(leg));
+    } else {
+      sessionStorage.removeItem(RETURN_LEG_KEY);
+    }
+    navigate(`/flights/${flight.id}/seats`);
+  };
+
+  // ±3-day strip around the searched date
+  const dateStrip = useMemo(() => {
+    if (!executed.date) return [];
+    const base = new Date(executed.date);
+    const days: string[] = [];
+    for (let offset = -3; offset <= 3; offset++) {
+      const d = new Date(base);
+      d.setDate(d.getDate() + offset);
+      const iso = toISODate(d);
+      if (iso >= todayISO()) days.push(iso);
+    }
+    return days;
+  }, [executed.date]);
+
   const airlines = useMemo(() => {
     const seen = new Map<string, string>();
     data?.flights.forEach((f) => seen.set(f.airline.iataCode, f.airline.name));
@@ -174,14 +255,9 @@ export default function FlightSearch() {
   }, [data]);
 
   const visibleFlights = useMemo(() => {
-    let list = data?.flights ?? [];
-    if (airlineFilter) list = list.filter((f) => f.airline.iataCode === airlineFilter);
-    return [...list].sort((a, b) => {
-      if (sort === 'price') return Number(a.economyPrice) - Number(b.economyPrice);
-      if (sort === 'duration') return a.route.durationMinutes - b.route.durationMinutes;
-      return new Date(a.departureTime).getTime() - new Date(b.departureTime).getTime();
-    });
-  }, [data, sort, airlineFilter]);
+    const list = data?.flights ?? [];
+    return airlineFilter ? list.filter((f) => f.airline.iataCode === airlineFilter) : list;
+  }, [data, airlineFilter]);
 
   const pagination = data?.pagination;
 
@@ -196,7 +272,6 @@ export default function FlightSearch() {
               'radial-gradient(600px 280px at 12% -10%, rgb(37 99 235 / 0.55), transparent 60%), radial-gradient(520px 260px at 88% 8%, rgb(124 58 237 / 0.5), transparent 60%), radial-gradient(400px 200px at 55% 115%, rgb(14 165 233 / 0.25), transparent 60%)',
           }}
         />
-        {/* faint flight path */}
         <svg
           className="pointer-events-none absolute inset-x-0 top-6 w-full h-28 opacity-20"
           viewBox="0 0 800 120"
@@ -226,11 +301,38 @@ export default function FlightSearch() {
         className="relative -mt-28 sm:-mt-30 mx-2 sm:mx-8 bg-white rounded-2xl border border-slate-200/80 shadow-lift p-4 sm:p-5 animate-fade-up"
         style={{ animationDelay: '140ms', marginTop: 'calc(-5.5rem)' }}
       >
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[1fr_auto_1fr_1fr_auto] gap-3 items-end">
+        {/* Trip type */}
+        <div className="inline-flex rounded-xl border border-slate-200 bg-slate-50 p-1 mb-4">
+          {(
+            [
+              ['one', 'One way'],
+              ['round', 'Round trip'],
+            ] as [TripType, string][]
+          ).map(([id, label]) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => setTrip(id)}
+              className={`px-4 h-9 rounded-lg text-xs font-bold transition-colors ${
+                form.trip === id
+                  ? 'bg-white text-brand-700 shadow-soft border border-slate-200'
+                  : 'text-ink-soft hover:text-ink'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        <div
+          className={`grid grid-cols-1 sm:grid-cols-2 gap-3 items-end ${
+            form.trip === 'round'
+              ? 'lg:grid-cols-[1fr_auto_1fr_1fr_1fr_auto]'
+              : 'lg:grid-cols-[1fr_auto_1fr_1fr_auto]'
+          }`}
+        >
           <div>
-            <label className="block text-[11px] font-bold uppercase tracking-wide text-ink-soft mb-1.5">
-              From
-            </label>
+            <label className={labelClass}>From</label>
             <input
               value={form.origin}
               onChange={(e) => setForm({ ...form, origin: e.target.value.toUpperCase() })}
@@ -250,9 +352,7 @@ export default function FlightSearch() {
           </button>
 
           <div>
-            <label className="block text-[11px] font-bold uppercase tracking-wide text-ink-soft mb-1.5">
-              To
-            </label>
+            <label className={labelClass}>To</label>
             <input
               value={form.destination}
               onChange={(e) => setForm({ ...form, destination: e.target.value.toUpperCase() })}
@@ -263,17 +363,29 @@ export default function FlightSearch() {
           </div>
 
           <div>
-            <label className="block text-[11px] font-bold uppercase tracking-wide text-ink-soft mb-1.5">
-              Departure
-            </label>
+            <label className={labelClass}>Departure</label>
             <input
               type="date"
               value={form.date}
-              min={new Date().toISOString().slice(0, 10)}
+              min={todayISO()}
               onChange={(e) => setForm({ ...form, date: e.target.value })}
               className={fieldClass}
             />
           </div>
+
+          {form.trip === 'round' && (
+            <div className="animate-fade-in">
+              <label className={labelClass}>Return</label>
+              <input
+                type="date"
+                value={form.returnDate}
+                min={form.date || todayISO()}
+                required
+                onChange={(e) => setForm({ ...form, returnDate: e.target.value })}
+                className={fieldClass}
+              />
+            </div>
+          )}
 
           <button
             type="submit"
@@ -307,6 +419,46 @@ export default function FlightSearch() {
 
       {/* Results */}
       <section>
+        {/* Date strip */}
+        {dateStrip.length > 1 && (
+          <div className="mb-4 flex gap-2 overflow-x-auto pb-1">
+            {dateStrip.map((iso) => {
+              const active = iso === executed.date;
+              const d = new Date(iso);
+              return (
+                <button
+                  key={iso}
+                  onClick={() => {
+                    setForm((f) => ({ ...f, date: iso }));
+                    applySearch({ date: iso });
+                  }}
+                  className={`shrink-0 px-4 py-2 rounded-xl border text-center transition-colors ${
+                    active
+                      ? 'bg-brand-600 border-brand-600 text-white shadow-soft'
+                      : 'bg-white border-slate-200 text-ink-soft hover:border-brand-300 hover:text-brand-700'
+                  }`}
+                >
+                  <span className="block text-[10px] font-bold uppercase tracking-wide">
+                    {d.toLocaleDateString([], { weekday: 'short' })}
+                  </span>
+                  <span className="block text-sm font-extrabold tabular-nums">
+                    {d.toLocaleDateString([], { month: 'short', day: 'numeric' })}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {executed.trip === 'round' && executed.returnDate && (
+          <div className="mb-4 p-3.5 rounded-xl bg-brand-50 border border-brand-100 text-brand-800 text-sm font-semibold animate-fade-in">
+            ✈️ Round trip — pick your <span className="font-extrabold">outbound</span> flight first.
+            After payment we'll bring you back for the return leg (
+            {executed.destination || 'anywhere'} → {executed.origin || 'anywhere'} ·{' '}
+            {formatDate(executed.returnDate)}).
+          </div>
+        )}
+
         {isLoading && (
           <div className="space-y-3">
             <SkeletonCard />
@@ -335,7 +487,6 @@ export default function FlightSearch() {
 
         {data && data.flights.length > 0 && (
           <>
-            {/* Results toolbar: count, airline filter, sort */}
             <div className="flex flex-wrap items-center gap-3 mb-4">
               <h2 className="text-lg font-extrabold tracking-tight">
                 {pagination?.total} flight{pagination?.total === 1 ? '' : 's'} available
@@ -373,8 +524,8 @@ export default function FlightSearch() {
               <label className="ml-auto flex items-center gap-2 text-xs font-semibold text-ink-soft">
                 Sort by
                 <select
-                  value={sort}
-                  onChange={(e) => setSort(e.target.value as SortKey)}
+                  value={executed.sort}
+                  onChange={(e) => applySearch({ sort: e.target.value as SortKey })}
                   className="h-9 pl-3 pr-8 rounded-lg border border-slate-200 bg-white text-xs font-bold text-ink focus:outline-none focus:ring-2 focus:ring-brand-500/60"
                 >
                   {SORTS.map((s) => (
@@ -388,7 +539,7 @@ export default function FlightSearch() {
 
             <div className={`space-y-3 ${isPlaceholderData ? 'opacity-60' : ''}`}>
               {visibleFlights.map((flight, i) => (
-                <FlightCard key={flight.id} flight={flight} index={i} />
+                <FlightCard key={flight.id} flight={flight} index={i} onSelect={selectFlight} />
               ))}
               {visibleFlights.length === 0 && (
                 <div className="bg-white rounded-2xl border border-slate-200/80 p-10 text-center">
@@ -399,7 +550,6 @@ export default function FlightSearch() {
               )}
             </div>
 
-            {/* Pagination */}
             {pagination && pagination.totalPages > 1 && (
               <div className="mt-6 flex items-center justify-center gap-3">
                 <button

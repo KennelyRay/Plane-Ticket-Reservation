@@ -8,7 +8,9 @@ const bookingInclude = {
       route: { include: { originAirport: true, destinationAirport: true } },
     },
   },
-  passengers: { include: { passenger: true, seat: true } },
+  passengers: {
+    include: { passenger: true, seat: true, ticket: { include: { boardingPass: true } } },
+  },
   payments: { orderBy: { createdAt: 'desc' } },
 } satisfies Prisma.BookingInclude;
 

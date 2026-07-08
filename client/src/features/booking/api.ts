@@ -3,6 +3,22 @@ import type { ApiResponse, Flight } from '../../types';
 
 export type BookingStatus = 'PENDING' | 'CONFIRMED' | 'CANCELLED' | 'EXPIRED' | 'COMPLETED';
 
+export interface BoardingPass {
+  id: string;
+  gate: string | null;
+  boardingTime: string;
+  seatNumber: string;
+  sequenceNumber: number;
+}
+
+export interface Ticket {
+  id: string;
+  ticketNumber: string;
+  status: 'ISSUED' | 'CHECKED_IN' | 'BOARDED' | 'USED' | 'CANCELLED';
+  barcodeData: string;
+  boardingPass: BoardingPass | null;
+}
+
 export interface BookingPassenger {
   id: string;
   cabinClass: 'ECONOMY' | 'PREMIUM_ECONOMY' | 'BUSINESS' | 'FIRST';
@@ -21,6 +37,7 @@ export interface BookingPassenger {
     seatNumber: string;
     seatType: 'WINDOW' | 'MIDDLE' | 'AISLE';
   } | null;
+  ticket: Ticket | null;
 }
 
 export type PaymentMethod = 'CARD' | 'GCASH' | 'PAYMAYA';
@@ -83,6 +100,11 @@ export const bookingApi = {
 
   async cancel(id: string) {
     const { data } = await api.post<ApiResponse<Booking>>(`/bookings/${id}/cancel`);
+    return data.data;
+  },
+
+  async checkIn(bookingId: string) {
+    const { data } = await api.post<ApiResponse<Booking>>(`/checkin/${bookingId}`);
     return data.data;
   },
 

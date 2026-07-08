@@ -1,16 +1,22 @@
 import { ApiError } from '../utils/ApiError';
-import { flightRepository } from '../repositories/flight.repository';
+import { flightRepository, FlightSortKey } from '../repositories/flight.repository';
+
+const SORT_KEYS: FlightSortKey[] = ['departure', 'price', 'duration'];
 
 export const flightService = {
   async search(query: {
     origin?: string;
     destination?: string;
     date?: string;
+    sort?: string;
     page?: string;
     pageSize?: string;
   }) {
     const page = Math.max(1, Number(query.page) || 1);
     const pageSize = Math.min(50, Math.max(1, Number(query.pageSize) || 10));
+    const sort = SORT_KEYS.includes(query.sort as FlightSortKey)
+      ? (query.sort as FlightSortKey)
+      : 'departure';
 
     const date = query.date ? new Date(query.date) : undefined;
     if (date && Number.isNaN(date.getTime())) {
@@ -21,6 +27,7 @@ export const flightService = {
       originIata: query.origin?.toUpperCase(),
       destinationIata: query.destination?.toUpperCase(),
       date,
+      sort,
       page,
       pageSize,
     });

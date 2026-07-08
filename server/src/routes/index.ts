@@ -4,6 +4,7 @@ import flightRoutes from './flight.routes';
 import seatRoutes from './seat.routes';
 import bookingRoutes from './booking.routes';
 import paymentRoutes from './payment.routes';
+import checkinRoutes from './checkin.routes';
 import adminRoutes from './admin.routes';
 
 const router = Router();
@@ -17,6 +18,7 @@ router.use('/flights', flightRoutes);
 router.use('/seats', seatRoutes);
 router.use('/bookings', bookingRoutes);
 router.use('/payments', paymentRoutes);
+router.use('/checkin', checkinRoutes);
 router.use('/admin', adminRoutes);
 
 // Future modules mount here:
@@ -26,7 +28,6 @@ router.use('/admin', adminRoutes);
 // router.use('/airports', airportRoutes);
 // router.use('/aircrafts', aircraftRoutes);
 // router.use('/tickets', ticketRoutes);
-// router.use('/checkin', checkinRoutes);
 // router.use('/reports', reportRoutes);
 
 export default router;
