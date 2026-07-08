@@ -2,8 +2,27 @@ import { useState } from 'react';
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../features/auth/store';
 import { authApi } from '../../features/auth/api';
-import { LogoMark } from '../ui/icons';
+import { LogoMark, PlaneIcon } from '../ui/icons';
 import SuccessModal from '../ui/SuccessModal';
+
+/** Ambient site-wide backdrop: drifting aurora blobs + passing planes. */
+function BackgroundScene() {
+  return (
+    <div aria-hidden className="bg-scene">
+      <span className="bg-blob bg-blob-1" />
+      <span className="bg-blob bg-blob-2" />
+      <span className="bg-blob bg-blob-3" />
+      <span className="bg-plane bg-plane-1">
+        <span className="bg-plane-trail" />
+        <PlaneIcon />
+      </span>
+      <span className="bg-plane bg-plane-2">
+        <span className="bg-plane-trail" />
+        <PlaneIcon />
+      </span>
+    </div>
+  );
+}
 
 const navLinkClass = ({ isActive }: { isActive: boolean }) =>
   `relative px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
@@ -47,6 +66,7 @@ export default function MainLayout() {
 
   return (
     <div className="min-h-screen flex flex-col">
+      <BackgroundScene />
       <header className="sticky top-0 z-20 bg-white/80 backdrop-blur-xl border-b border-slate-200/70">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
           <Wordmark />

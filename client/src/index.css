@@ -110,3 +110,141 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   cursor: pointer;
   opacity: 0.55;
 }
+
+/* ── Ambient animated background ───────────────────────────────
+   Fixed scene behind all content: drifting aurora blobs and tiny
+   planes crossing with dotted contrails. Transform-only animations
+   so it stays off the layout/paint path. */
+.bg-scene {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.bg-blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(90px);
+  will-change: transform;
+}
+.bg-blob-1 {
+  width: 540px;
+  height: 540px;
+  top: -180px;
+  left: -140px;
+  background: rgb(37 99 235 / 0.16);
+  animation: blob-drift-a 46s ease-in-out infinite alternate;
+}
+.bg-blob-2 {
+  width: 480px;
+  height: 480px;
+  top: 32%;
+  right: -160px;
+  background: rgb(124 58 237 / 0.14);
+  animation: blob-drift-b 58s ease-in-out infinite alternate;
+}
+.bg-blob-3 {
+  width: 440px;
+  height: 440px;
+  bottom: -160px;
+  left: 28%;
+  background: rgb(14 165 233 / 0.13);
+  animation: blob-drift-c 66s ease-in-out infinite alternate;
+}
+@keyframes blob-drift-a {
+  to {
+    transform: translate(130px, 90px) scale(1.15);
+  }
+}
+@keyframes blob-drift-b {
+  to {
+    transform: translate(-110px, -100px) scale(1.1);
+  }
+}
+@keyframes blob-drift-c {
+  to {
+    transform: translate(-90px, -70px) scale(1.2);
+  }
+}
+
+.bg-plane {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  opacity: 0;
+  will-change: transform;
+}
+.bg-plane svg {
+  width: 22px;
+  height: 22px;
+  color: rgb(37 99 235 / 0.35);
+}
+.bg-plane .bg-plane-trail {
+  width: 150px;
+  height: 2px;
+  background: repeating-linear-gradient(
+    90deg,
+    transparent 0 7px,
+    rgb(37 99 235 / 0.25) 7px 13px
+  );
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000);
+  mask-image: linear-gradient(90deg, transparent, #000);
+}
+.bg-plane-1 {
+  animation: plane-fly-a 44s linear infinite;
+  animation-delay: -4s;
+}
+.bg-plane-2 {
+  transform-origin: center;
+  animation: plane-fly-b 58s linear infinite;
+  animation-delay: -32s;
+}
+/* Visible for roughly the first third of each loop, then rests off-screen */
+@keyframes plane-fly-a {
+  0% {
+    transform: translate(-12vw, 86vh) rotate(-21deg);
+    opacity: 0;
+  }
+  2% {
+    opacity: 1;
+  }
+  30% {
+    opacity: 1;
+  }
+  33%,
+  100% {
+    transform: translate(112vw, 12vh) rotate(-21deg);
+    opacity: 0;
+  }
+}
+@keyframes plane-fly-b {
+  0% {
+    transform: translate(-10vw, 34vh) rotate(-6deg) scale(0.75);
+    opacity: 0;
+  }
+  2% {
+    opacity: 0.8;
+  }
+  26% {
+    opacity: 0.8;
+  }
+  29%,
+  100% {
+    transform: translate(110vw, 22vh) rotate(-6deg) scale(0.75);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bg-blob {
+    animation: none;
+  }
+  .bg-plane {
+    display: none;
+  }
+}
