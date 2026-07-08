@@ -12,7 +12,11 @@ export function useSeatSocket(flightId: string | undefined) {
   useEffect(() => {
     if (!flightId) return;
 
-    const socket = io({ withCredentials: true });
+    // Same origin in dev (Vite proxies /socket.io); the API server's origin in production
+    const apiUrl = import.meta.env.VITE_API_URL as string | undefined;
+    const socket = apiUrl?.startsWith('http')
+      ? io(new URL(apiUrl).origin, { withCredentials: true })
+      : io({ withCredentials: true });
     socket.emit('seatmap:join', flightId);
 
     const refresh = () => {
