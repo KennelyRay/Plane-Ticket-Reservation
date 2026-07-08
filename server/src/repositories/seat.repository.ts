@@ -9,12 +9,19 @@ export const seatRepository = {
     });
   },
 
-  /** Seat ids already taken by active bookings on this flight. */
+  /** Seat ids already taken by active bookings on this flight.
+   *  PENDING bookings hold their seats only until their payment window closes. */
   async findBookedSeatIds(flightId: string) {
     const rows = await prisma.bookingPassenger.findMany({
       where: {
         seatId: { not: null },
-        booking: { flightId, status: { in: ['PENDING', 'CONFIRMED', 'COMPLETED'] } },
+        booking: {
+          flightId,
+          OR: [
+            { status: { in: ['CONFIRMED', 'COMPLETED'] } },
+            { status: 'PENDING', expiresAt: { gt: new Date() } },
+          ],
+        },
       },
       select: { seatId: true },
     });

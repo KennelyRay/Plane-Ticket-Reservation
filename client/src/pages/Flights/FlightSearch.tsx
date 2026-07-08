@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { flightApi, type FlightSearchParams } from '../../features/flight/api';
 import type { Flight } from '../../types';
 import { PlaneIcon, SearchIcon, SwapIcon } from '../../components/ui/icons';
@@ -19,6 +19,14 @@ const POPULAR_ROUTES: Array<[string, string, string]> = [
   ['MNL', 'ILO', 'Iloilo'],
   ['MNL', 'SIN', 'Singapore'],
   ['MNL', 'NRT', 'Tokyo'],
+];
+
+type SortKey = 'departure' | 'price' | 'duration';
+
+const SORTS: { id: SortKey; label: string }[] = [
+  { id: 'departure', label: 'Departure time' },
+  { id: 'price', label: 'Price (low → high)' },
+  { id: 'duration', label: 'Duration' },
 ];
 
 const fieldClass =
@@ -62,7 +70,7 @@ function FlightCard({ flight, index }: { flight: Flight; index: number }) {
             <div className="w-full flex items-center gap-1">
               <span className="w-1.5 h-1.5 rounded-full bg-brand-400" />
               <span className="flex-1 border-t-2 border-dotted border-slate-300" />
-              <PlaneIcon className="w-4 h-4 text-brand-500" />
+              <PlaneIcon className="w-4 h-4 text-brand-500 group-hover:translate-x-1 transition-transform" />
               <span className="flex-1 border-t-2 border-dotted border-slate-300" />
               <span className="w-1.5 h-1.5 rounded-full bg-violet-glow" />
             </div>
@@ -84,6 +92,11 @@ function FlightCard({ flight, index }: { flight: Flight; index: number }) {
               ₱{Number(flight.economyPrice).toLocaleString()}
             </p>
             <p className="text-[11px] font-medium text-ink-soft">Economy · per passenger</p>
+            {flight.businessPrice && (
+              <p className="text-[11px] font-semibold text-indigo-600">
+                Business ₱{Number(flight.businessPrice).toLocaleString()}
+              </p>
+            )}
           </div>
           <button
             onClick={() => navigate(`/flights/${flight.id}/seats`)}
@@ -115,18 +128,23 @@ function SkeletonCard() {
 export default function FlightSearch() {
   const [form, setForm] = useState({ origin: 'MNL', destination: 'CEB', date: '' });
   const [params, setParams] = useState<FlightSearchParams | null>({ origin: 'MNL', destination: 'CEB' });
+  const [sort, setSort] = useState<SortKey>('departure');
+  const [airlineFilter, setAirlineFilter] = useState<string | null>(null);
 
-  const { data, isLoading, isError } = useQuery({
+  const { data, isLoading, isError, isPlaceholderData } = useQuery({
     queryKey: ['flights', params],
     queryFn: () => flightApi.search(params!),
     enabled: !!params,
+    placeholderData: keepPreviousData,
   });
 
   const search = (origin: string, destination: string, date: string) => {
+    setAirlineFilter(null);
     setParams({
       origin: origin || undefined,
       destination: destination || undefined,
       date: date || undefined,
+      page: 1,
     });
   };
 
@@ -142,6 +160,30 @@ export default function FlightSearch() {
     setForm((f) => ({ ...f, origin, destination }));
     search(origin, destination, form.date);
   };
+
+  const goToPage = (page: number) => {
+    setParams((p) => ({ ...p, page }));
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // Airlines present in the current results (for the filter chips)
+  const airlines = useMemo(() => {
+    const seen = new Map<string, string>();
+    data?.flights.forEach((f) => seen.set(f.airline.iataCode, f.airline.name));
+    return [...seen.entries()];
+  }, [data]);
+
+  const visibleFlights = useMemo(() => {
+    let list = data?.flights ?? [];
+    if (airlineFilter) list = list.filter((f) => f.airline.iataCode === airlineFilter);
+    return [...list].sort((a, b) => {
+      if (sort === 'price') return Number(a.economyPrice) - Number(b.economyPrice);
+      if (sort === 'duration') return a.route.durationMinutes - b.route.durationMinutes;
+      return new Date(a.departureTime).getTime() - new Date(b.departureTime).getTime();
+    });
+  }, [data, sort, airlineFilter]);
+
+  const pagination = data?.pagination;
 
   return (
     <div className="space-y-8">
@@ -293,19 +335,92 @@ export default function FlightSearch() {
 
         {data && data.flights.length > 0 && (
           <>
-            <div className="flex items-center justify-between mb-4">
+            {/* Results toolbar: count, airline filter, sort */}
+            <div className="flex flex-wrap items-center gap-3 mb-4">
               <h2 className="text-lg font-extrabold tracking-tight">
-                {data.pagination.total} flight{data.pagination.total === 1 ? '' : 's'} available
+                {pagination?.total} flight{pagination?.total === 1 ? '' : 's'} available
               </h2>
-              <p className="text-xs font-semibold text-ink-soft">
-                Sorted by departure time
-              </p>
+
+              {airlines.length > 1 && (
+                <div className="flex items-center gap-1.5 sm:ml-2">
+                  <button
+                    onClick={() => setAirlineFilter(null)}
+                    className={`px-2.5 py-1 rounded-full text-[11px] font-bold border transition-colors ${
+                      airlineFilter === null
+                        ? 'bg-brand-600 border-brand-600 text-white'
+                        : 'bg-white border-slate-200 text-ink-soft hover:border-brand-300'
+                    }`}
+                  >
+                    All
+                  </button>
+                  {airlines.map(([code, name]) => (
+                    <button
+                      key={code}
+                      onClick={() => setAirlineFilter(airlineFilter === code ? null : code)}
+                      title={name}
+                      className={`px-2.5 py-1 rounded-full text-[11px] font-bold border transition-colors ${
+                        airlineFilter === code
+                          ? 'bg-brand-600 border-brand-600 text-white'
+                          : 'bg-white border-slate-200 text-ink-soft hover:border-brand-300'
+                      }`}
+                    >
+                      {code}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              <label className="ml-auto flex items-center gap-2 text-xs font-semibold text-ink-soft">
+                Sort by
+                <select
+                  value={sort}
+                  onChange={(e) => setSort(e.target.value as SortKey)}
+                  className="h-9 pl-3 pr-8 rounded-lg border border-slate-200 bg-white text-xs font-bold text-ink focus:outline-none focus:ring-2 focus:ring-brand-500/60"
+                >
+                  {SORTS.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
             </div>
-            <div className="space-y-3">
-              {data.flights.map((flight, i) => (
+
+            <div className={`space-y-3 ${isPlaceholderData ? 'opacity-60' : ''}`}>
+              {visibleFlights.map((flight, i) => (
                 <FlightCard key={flight.id} flight={flight} index={i} />
               ))}
+              {visibleFlights.length === 0 && (
+                <div className="bg-white rounded-2xl border border-slate-200/80 p-10 text-center">
+                  <p className="text-sm font-semibold text-ink-soft">
+                    No flights from this airline on the current page — try clearing the filter.
+                  </p>
+                </div>
+              )}
             </div>
+
+            {/* Pagination */}
+            {pagination && pagination.totalPages > 1 && (
+              <div className="mt-6 flex items-center justify-center gap-3">
+                <button
+                  disabled={pagination.page <= 1 || isPlaceholderData}
+                  onClick={() => goToPage(pagination.page - 1)}
+                  className="h-10 px-4 rounded-xl text-sm font-bold border border-slate-200 bg-white text-ink hover:border-brand-300 hover:text-brand-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  ← Previous
+                </button>
+                <span className="text-xs font-bold text-ink-soft tabular-nums">
+                  Page {pagination.page} of {pagination.totalPages}
+                </span>
+                <button
+                  disabled={pagination.page >= pagination.totalPages || isPlaceholderData}
+                  onClick={() => goToPage(pagination.page + 1)}
+                  className="h-10 px-4 rounded-xl text-sm font-bold border border-slate-200 bg-white text-ink hover:border-brand-300 hover:text-brand-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Next →
+                </button>
+              </div>
+            )}
           </>
         )}
       </section>

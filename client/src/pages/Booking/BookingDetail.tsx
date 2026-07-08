@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { isAxiosError } from 'axios';
 import { useState } from 'react';
 import { bookingApi, type BookingStatus } from '../../features/booking/api';
+import LockCountdown from '../../components/booking/LockCountdown';
 import { PlaneIcon, TicketIcon } from '../../components/ui/icons';
 
 const formatTime = (iso: string) =>
@@ -23,7 +24,7 @@ export default function BookingDetail() {
   const { bookingId } = useParams<{ bookingId: string }>();
   const location = useLocation();
   const queryClient = useQueryClient();
-  const justBooked = Boolean((location.state as { justBooked?: boolean } | null)?.justBooked);
+  const justPaid = Boolean((location.state as { justPaid?: boolean } | null)?.justPaid);
   const [cancelError, setCancelError] = useState<string | null>(null);
 
   const { data: booking, isLoading, isError } = useQuery({
@@ -80,11 +81,37 @@ export default function BookingDetail() {
         ← My bookings
       </Link>
 
-      {justBooked && booking.status === 'CONFIRMED' && (
+      {justPaid && booking.status === 'CONFIRMED' && (
         <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm font-semibold animate-fade-in">
-          🎉 Booking confirmed! Your reference is{' '}
+          🎉 Payment successful — booking confirmed! Your reference is{' '}
           <span className="font-extrabold">{booking.bookingReference}</span> — keep it handy for
           check-in.
+        </div>
+      )}
+
+      {booking.status === 'PENDING' && (
+        <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-800 text-sm font-semibold animate-fade-in flex flex-wrap items-center gap-3">
+          <span className="flex-1 min-w-0">
+            ⏳ Payment pending — your seats are held
+            {booking.expiresAt && (
+              <>
+                {' '}
+                for{' '}
+                <LockCountdown
+                  expiresAt={new Date(booking.expiresAt).getTime()}
+                  onExpire={() =>
+                    queryClient.invalidateQueries({ queryKey: ['booking', bookingId] })
+                  }
+                />
+              </>
+            )}
+          </span>
+          <Link
+            to={`/bookings/${booking.id}/pay`}
+            className="h-10 px-5 inline-flex items-center rounded-xl text-sm font-bold text-white bg-gradient-to-r from-brand-600 to-violet-glow shadow-soft hover:shadow-lift transition-all shrink-0"
+          >
+            Complete payment
+          </Link>
         </div>
       )}
 
@@ -166,11 +193,22 @@ export default function BookingDetail() {
           ))}
         </ul>
         <div className="border-t border-slate-100 mt-2 pt-4 flex items-center justify-between">
-          <span className="text-sm font-extrabold">Total paid</span>
+          <span className="text-sm font-extrabold">
+            {booking.status === 'PENDING' ? 'Total due' : 'Total'}
+          </span>
           <span className="text-xl font-extrabold tabular-nums">
             ₱{Number(booking.totalAmount).toLocaleString()}
           </span>
         </div>
+        {booking.payments.some((p) => p.status === 'PAID') && (
+          <p className="text-xs font-medium text-ink-soft mt-2">
+            Paid via{' '}
+            {booking.payments
+              .filter((p) => p.status === 'PAID')
+              .map((p) => `${p.method === 'CARD' ? 'card' : p.method === 'GCASH' ? 'GCash' : 'Maya'} · ref ${p.transactionId}`)
+              .join(', ')}
+          </p>
+        )}
       </div>
 
       {/* Contact + actions */}

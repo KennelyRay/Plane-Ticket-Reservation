@@ -23,6 +23,19 @@ export interface BookingPassenger {
   } | null;
 }
 
+export type PaymentMethod = 'CARD' | 'GCASH' | 'PAYMAYA';
+
+export interface Payment {
+  id: string;
+  amount: string;
+  currency: string;
+  method: PaymentMethod;
+  transactionId: string | null;
+  status: 'PENDING' | 'PAID' | 'FAILED' | 'REFUNDED' | 'PARTIALLY_REFUNDED';
+  paidAt: string | null;
+  createdAt: string;
+}
+
 export interface Booking {
   id: string;
   bookingReference: string;
@@ -30,9 +43,11 @@ export interface Booking {
   totalAmount: string;
   contactEmail: string;
   contactPhone: string | null;
+  expiresAt: string | null;
   createdAt: string;
   flight: Flight;
   passengers: BookingPassenger[];
+  payments: Payment[];
 }
 
 export interface CreateBookingPayload {
@@ -68,6 +83,15 @@ export const bookingApi = {
 
   async cancel(id: string) {
     const { data } = await api.post<ApiResponse<Booking>>(`/bookings/${id}/cancel`);
+    return data.data;
+  },
+
+  async pay(payload: {
+    bookingId: string;
+    method: PaymentMethod;
+    card?: { holder: string; number: string; expiry: string; cvv: string };
+  }) {
+    const { data } = await api.post<ApiResponse<Booking>>('/payments', payload);
     return data.data;
   },
 };

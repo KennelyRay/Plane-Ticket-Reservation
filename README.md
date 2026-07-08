@@ -53,6 +53,7 @@ npm run dev            # http://localhost:5173 (proxies /api + /socket.io to :50
 | `GET /api/bookings` | List my bookings (auth required) |
 | `GET /api/bookings/:id` | Booking detail — owner or admin (auth required) |
 | `POST /api/bookings/:id/cancel` | Cancel a booking, freeing its seats (auth required) |
+| `POST /api/payments` | Pay a pending booking — demo gateway (auth required) |
 
 ## Backend pattern
 
@@ -94,17 +95,20 @@ Seats are held for **5 minutes** when selected. Locks live in Redis when
 
 ## Booking flow
 
-Seat selection → passenger details → confirmed booking (reference like
-`VF-8KD3QT`). Fares are computed server-side (cabin base price + seat fee)
-and seats are re-validated against the caller's live locks before the
-booking is created. Booked seats broadcast `seat:booked`; cancelling a
-booking frees its seats and broadcasts `seat:released`. Bookings confirm
-immediately — payment capture lands with the payments module.
+Seat selection → passenger details → payment → confirmed booking
+(reference like `VF-8KD3QT`). Fares are computed server-side (cabin base
+price + seat fee) and seats are re-validated against the caller's live
+locks before the booking is created. The booking starts `PENDING` and
+holds its seats for a **15-minute payment window**; paying (demo gateway:
+card / GCash / Maya — card numbers ending in `0000` are declined)
+confirms it, while unpaid bookings lapse to `EXPIRED` and their seats
+free up automatically. Booked seats broadcast `seat:booked`; cancelling
+frees seats and broadcasts `seat:released`.
 
 ## Roadmap (next modules)
 
 - Booking extras (meals, baggage, promo codes)
-- Payments (Stripe/PayMongo)
+- Real payment capture (Stripe/PayMongo) behind the demo gateway
 - Ticket PDF + QR generation, email delivery
 - Check-in & boarding passes
 - Admin dashboard, reports, audit logs

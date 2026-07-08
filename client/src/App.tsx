@@ -7,6 +7,7 @@ import FlightSearch from './pages/Flights/FlightSearch';
 import SeatSelection from './pages/Booking/SeatSelection';
 import PassengerDetails from './pages/Booking/PassengerDetails';
 import BookingDetail from './pages/Booking/BookingDetail';
+import Payment from './pages/Booking/Payment';
 import MyBookings from './pages/Booking/MyBookings';
 import Dashboard from './pages/Dashboard/Dashboard';
 import AdminDashboard from './pages/Admin/AdminDashboard';
@@ -27,6 +28,7 @@ export default function App() {
             <Route path="/flights/:flightId/passengers" element={<PassengerDetails />} />
             <Route path="/bookings" element={<MyBookings />} />
             <Route path="/bookings/:bookingId" element={<BookingDetail />} />
+            <Route path="/bookings/:bookingId/pay" element={<Payment />} />
           </Route>
 
           <Route element={<ProtectedRoute roles={['ADMIN']} />}>

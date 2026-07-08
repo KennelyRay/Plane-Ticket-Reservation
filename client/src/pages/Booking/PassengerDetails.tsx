@@ -101,7 +101,7 @@ function PassengerForm({
       });
       queryClient.invalidateQueries({ queryKey: ['seatmap', flightId] });
       queryClient.invalidateQueries({ queryKey: ['bookings'] });
-      navigate(`/bookings/${booking.id}`, { replace: true, state: { justBooked: true } });
+      navigate(`/bookings/${booking.id}/pay`, { replace: true });
     } catch (err) {
       setServerError(
         isAxiosError(err)

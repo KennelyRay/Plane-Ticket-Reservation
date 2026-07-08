@@ -11,6 +11,8 @@ import { AuthUser } from '../middleware/auth';
 // Unambiguous alphabet (no 0/O, 1/I) for booking references like "VF-8KD3QT"
 const REF_ALPHABET = '23456789ABCDEFGHJKMNPQRSTUVWXYZ';
 
+export const PAYMENT_WINDOW_MINUTES = 15;
+
 const generateReference = async () => {
   for (let attempt = 0; attempt < 5; attempt++) {
     let ref = 'VF-';
@@ -67,13 +69,14 @@ export const bookingService = {
 
     const bookingReference = await generateReference();
 
-    // Nested create keeps booking + passengers atomic. Payments arrive in a
-    // later module, so bookings confirm immediately for now.
+    // Nested create keeps booking + passengers atomic. The booking holds its
+    // seats while PENDING; it confirms on payment or expires unpaid.
     const booking = await bookingRepository.create({
       bookingReference,
       user: { connect: { id: userId } },
       flight: { connect: { id: input.flightId } },
-      status: 'CONFIRMED',
+      status: 'PENDING',
+      expiresAt: new Date(Date.now() + PAYMENT_WINDOW_MINUTES * 60 * 1000),
       totalAmount,
       contactEmail: input.contactEmail,
       contactPhone: input.contactPhone,
@@ -106,10 +109,12 @@ export const bookingService = {
   },
 
   async getMyBookings(userId: string) {
+    await bookingRepository.expireStale({ userId });
     return bookingRepository.findByUser(userId);
   },
 
   async getBooking(id: string, user: AuthUser) {
+    await bookingRepository.expireStale({ id });
     const booking = await bookingRepository.findById(id);
     if (!booking) throw ApiError.notFound('Booking not found');
     if (booking.userId !== user.id && user.role !== 'ADMIN')
