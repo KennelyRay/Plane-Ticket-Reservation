@@ -123,6 +123,36 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   pointer-events: none;
 }
 
+/* Flight-chart grid, softly masked so it fades in and out like cloud cover.
+   It pans by whole cell multiples, so the loop restart is invisible. */
+.bg-grid {
+  position: absolute;
+  inset: -140px;
+  background-image:
+    linear-gradient(rgb(37 99 235 / 0.07) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(37 99 235 / 0.07) 1px, transparent 1px);
+  background-size: 44px 44px;
+  -webkit-mask-image: radial-gradient(
+    ellipse 85% 75% at 50% 38%,
+    #000 25%,
+    rgb(0 0 0 / 0.35) 55%,
+    transparent 80%
+  );
+  mask-image: radial-gradient(
+    ellipse 85% 75% at 50% 38%,
+    #000 25%,
+    rgb(0 0 0 / 0.35) 55%,
+    transparent 80%
+  );
+  animation: grid-pan 60s linear infinite;
+  will-change: transform;
+}
+@keyframes grid-pan {
+  to {
+    transform: translate(88px, 44px);
+  }
+}
+
 .bg-blob {
   position: absolute;
   border-radius: 50%;
@@ -130,27 +160,27 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   will-change: transform;
 }
 .bg-blob-1 {
-  width: 540px;
-  height: 540px;
+  width: 620px;
+  height: 620px;
   top: -180px;
   left: -140px;
-  background: rgb(37 99 235 / 0.16);
+  background: rgb(37 99 235 / 0.28);
   animation: blob-drift-a 46s ease-in-out infinite alternate;
 }
 .bg-blob-2 {
-  width: 480px;
-  height: 480px;
+  width: 540px;
+  height: 540px;
   top: 32%;
   right: -160px;
-  background: rgb(124 58 237 / 0.14);
+  background: rgb(124 58 237 / 0.24);
   animation: blob-drift-b 58s ease-in-out infinite alternate;
 }
 .bg-blob-3 {
-  width: 440px;
-  height: 440px;
+  width: 500px;
+  height: 500px;
   bottom: -160px;
   left: 28%;
-  background: rgb(14 165 233 / 0.13);
+  background: rgb(14 165 233 / 0.22);
   animation: blob-drift-c 66s ease-in-out infinite alternate;
 }
 @keyframes blob-drift-a {
@@ -169,6 +199,69 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   }
 }
 
+/* Puffy clouds built from a pill + two circle puffs, sized in em so one
+   ruleset scales per cloud via font-size. They drift across the viewport
+   at different depths and speeds. */
+.bg-cloud {
+  position: absolute;
+  left: 0;
+  width: 16em;
+  height: 4.6em;
+  background: rgb(255 255 255 / 0.92);
+  border-radius: 9999px;
+  filter: blur(5px);
+  box-shadow: 0 14px 34px rgb(37 99 235 / 0.1);
+  will-change: transform;
+}
+.bg-cloud::before,
+.bg-cloud::after {
+  content: '';
+  position: absolute;
+  background: inherit;
+  border-radius: 50%;
+}
+.bg-cloud::before {
+  width: 6em;
+  height: 6em;
+  left: 2.4em;
+  top: -2.7em;
+}
+.bg-cloud::after {
+  width: 8.2em;
+  height: 8.2em;
+  left: 6.6em;
+  top: -3.9em;
+}
+.bg-cloud-1 {
+  font-size: 15px;
+  top: 14vh;
+  opacity: 0.95;
+  animation: cloud-drift 120s linear infinite;
+  animation-delay: -38s;
+}
+.bg-cloud-2 {
+  font-size: 9px;
+  top: 44vh;
+  opacity: 0.7;
+  animation: cloud-drift 165s linear infinite;
+  animation-delay: -120s;
+}
+.bg-cloud-3 {
+  font-size: 19px;
+  top: 68vh;
+  opacity: 0.85;
+  animation: cloud-drift 100s linear infinite;
+  animation-delay: -72s;
+}
+@keyframes cloud-drift {
+  from {
+    transform: translateX(-30vw);
+  }
+  to {
+    transform: translateX(118vw);
+  }
+}
+
 .bg-plane {
   position: absolute;
   top: 0;
@@ -180,17 +273,17 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   will-change: transform;
 }
 .bg-plane svg {
-  width: 22px;
-  height: 22px;
-  color: rgb(37 99 235 / 0.35);
+  width: 28px;
+  height: 28px;
+  color: rgb(37 99 235 / 0.55);
 }
 .bg-plane .bg-plane-trail {
-  width: 150px;
-  height: 2px;
+  width: 180px;
+  height: 2.5px;
   background: repeating-linear-gradient(
     90deg,
     transparent 0 7px,
-    rgb(37 99 235 / 0.25) 7px 13px
+    rgb(37 99 235 / 0.42) 7px 13px
   );
   -webkit-mask-image: linear-gradient(90deg, transparent, #000);
   mask-image: linear-gradient(90deg, transparent, #000);
@@ -241,7 +334,9 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .bg-blob {
+  .bg-blob,
+  .bg-grid,
+  .bg-cloud {
     animation: none;
   }
   .bg-plane {

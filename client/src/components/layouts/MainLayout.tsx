@@ -9,9 +9,13 @@ import SuccessModal from '../ui/SuccessModal';
 function BackgroundScene() {
   return (
     <div aria-hidden className="bg-scene">
+      <span className="bg-grid" />
       <span className="bg-blob bg-blob-1" />
       <span className="bg-blob bg-blob-2" />
       <span className="bg-blob bg-blob-3" />
+      <span className="bg-cloud bg-cloud-1" />
+      <span className="bg-cloud bg-cloud-2" />
+      <span className="bg-cloud bg-cloud-3" />
       <span className="bg-plane bg-plane-1">
         <span className="bg-plane-trail" />
         <PlaneIcon />
