@@ -19,8 +19,18 @@ const AIRPORTS = [
   { name: 'Mactan–Cebu International Airport', iataCode: 'CEB', icaoCode: 'RPVM', city: 'Cebu', country: 'Philippines', timezone: 'Asia/Manila' },
   { name: 'Francisco Bangoy International Airport', iataCode: 'DVO', icaoCode: 'RPMD', city: 'Davao', country: 'Philippines', timezone: 'Asia/Manila' },
   { name: 'Iloilo International Airport', iataCode: 'ILO', icaoCode: 'RPVI', city: 'Iloilo', country: 'Philippines', timezone: 'Asia/Manila' },
+  { name: 'Clark International Airport', iataCode: 'CRK', icaoCode: 'RPLC', city: 'Clark', country: 'Philippines', timezone: 'Asia/Manila' },
+  { name: 'Puerto Princesa International Airport', iataCode: 'PPS', icaoCode: 'RPVP', city: 'Puerto Princesa', country: 'Philippines', timezone: 'Asia/Manila' },
+  { name: 'Bohol–Panglao International Airport', iataCode: 'TAG', icaoCode: 'RPSP', city: 'Bohol', country: 'Philippines', timezone: 'Asia/Manila' },
+  { name: 'Kalibo International Airport', iataCode: 'KLO', icaoCode: 'RPVK', city: 'Kalibo', country: 'Philippines', timezone: 'Asia/Manila' },
+  { name: 'Bacolod–Silay Airport', iataCode: 'BCD', icaoCode: 'RPVB', city: 'Bacolod', country: 'Philippines', timezone: 'Asia/Manila' },
+  { name: 'Laguindingan Airport', iataCode: 'CGY', icaoCode: 'RPMY', city: 'Cagayan de Oro', country: 'Philippines', timezone: 'Asia/Manila' },
   { name: 'Singapore Changi Airport', iataCode: 'SIN', icaoCode: 'WSSS', city: 'Singapore', country: 'Singapore', timezone: 'Asia/Singapore' },
   { name: 'Narita International Airport', iataCode: 'NRT', icaoCode: 'RJAA', city: 'Tokyo', country: 'Japan', timezone: 'Asia/Tokyo' },
+  { name: 'Hong Kong International Airport', iataCode: 'HKG', icaoCode: 'VHHH', city: 'Hong Kong', country: 'Hong Kong', timezone: 'Asia/Hong_Kong' },
+  { name: 'Incheon International Airport', iataCode: 'ICN', icaoCode: 'RKSI', city: 'Seoul', country: 'South Korea', timezone: 'Asia/Seoul' },
+  { name: 'Suvarnabhumi Airport', iataCode: 'BKK', icaoCode: 'VTBS', city: 'Bangkok', country: 'Thailand', timezone: 'Asia/Bangkok' },
+  { name: 'Kuala Lumpur International Airport', iataCode: 'KUL', icaoCode: 'WMKK', city: 'Kuala Lumpur', country: 'Malaysia', timezone: 'Asia/Kuala_Lumpur' },
 ];
 
 const AIRLINES = [
@@ -36,10 +46,41 @@ const ROUTES: Array<[string, string, number, number]> = [
   ['DVO', 'MNL', 105, 970],
   ['MNL', 'ILO', 70, 460],
   ['ILO', 'MNL', 70, 460],
+  ['MNL', 'PPS', 75, 590],
+  ['PPS', 'MNL', 75, 590],
+  ['MNL', 'TAG', 75, 630],
+  ['TAG', 'MNL', 75, 630],
+  ['MNL', 'KLO', 60, 345],
+  ['KLO', 'MNL', 60, 345],
+  ['MNL', 'BCD', 70, 480],
+  ['BCD', 'MNL', 70, 480],
+  ['MNL', 'CGY', 90, 800],
+  ['CGY', 'MNL', 90, 800],
+  // Clark hub
+  ['CRK', 'CEB', 80, 500],
+  ['CEB', 'CRK', 80, 500],
+  ['CRK', 'DVO', 110, 990],
+  ['DVO', 'CRK', 110, 990],
+  ['CRK', 'SIN', 235, 2440],
+  ['SIN', 'CRK', 235, 2440],
+  // Inter-island
+  ['CEB', 'DVO', 70, 400],
+  ['DVO', 'CEB', 70, 400],
+  // International
   ['MNL', 'SIN', 220, 2390],
   ['SIN', 'MNL', 220, 2390],
   ['MNL', 'NRT', 270, 3010],
   ['NRT', 'MNL', 270, 3010],
+  ['MNL', 'HKG', 135, 1120],
+  ['HKG', 'MNL', 135, 1120],
+  ['MNL', 'ICN', 235, 2620],
+  ['ICN', 'MNL', 235, 2620],
+  ['MNL', 'BKK', 200, 2210],
+  ['BKK', 'MNL', 200, 2210],
+  ['MNL', 'KUL', 240, 2480],
+  ['KUL', 'MNL', 240, 2480],
+  ['CEB', 'SIN', 215, 2270],
+  ['SIN', 'CEB', 215, 2270],
 ];
 
 async function seedSeats(seatLayoutId: string) {
@@ -170,13 +211,23 @@ async function main() {
   }
 
   console.log('Seeding flights (next 14 days)...');
-  const existingFlights = await prisma.flight.count();
-  if (existingFlights === 0) {
+  // Only generate for routes that have no flights yet, so re-running the seed
+  // fills in newly added routes without duplicating existing schedules.
+  const routesWithFlights = new Set(
+    (await prisma.flight.findMany({ select: { routeId: true }, distinct: ['routeId'] })).map(
+      (f) => f.routeId
+    )
+  );
+  const airportById = new Map((await prisma.airport.findMany()).map((a) => [a.id, a]));
+  const newRoutes = routes.filter((r) => !routesWithFlights.has(r.id));
+
+  if (newRoutes.length > 0) {
     const departureHours = [6, 10, 14, 18];
     const flights = [];
     for (let day = 0; day < 14; day++) {
       for (let r = 0; r < routes.length; r++) {
         const route = routes[r];
+        if (routesWithFlights.has(route.id)) continue;
         const airline = r % 2 === 0 ? pal : cebPac;
         const aircraft = aircrafts[r % aircrafts.length];
         const hour = departureHours[r % departureHours.length];
@@ -186,11 +237,15 @@ async function main() {
         departureTime.setHours(hour, 0, 0, 0);
         const arrivalTime = new Date(departureTime.getTime() + route.durationMinutes * 60_000);
 
-        const isInternational = route.durationMinutes > 150;
+        const isInternational =
+          airportById.get(route.originAirportId)!.country !==
+          airportById.get(route.destinationAirportId)!.country;
         const base = isInternational ? 8500 : 2500;
 
         flights.push({
-          flightNumber: `${airline.iataCode}${100 + r * 10 + (day % 10)}`,
+          // 20-wide blocks per route index: numbers from the original 10-wide
+          // series (≤199) can't collide with routes added later (index ≥ 6 → ≥220)
+          flightNumber: `${airline.iataCode}${100 + r * 20 + (day % 10)}`,
           airlineId: airline.id,
           aircraftId: aircraft.id,
           routeId: route.id,
@@ -205,9 +260,9 @@ async function main() {
       }
     }
     await prisma.flight.createMany({ data: flights });
-    console.log(`Created ${flights.length} flights`);
+    console.log(`Created ${flights.length} flights for ${newRoutes.length} new routes`);
   } else {
-    console.log(`Skipped — ${existingFlights} flights already exist`);
+    console.log('Skipped — all routes already have flights');
   }
 
   console.log('Seeding meals & promo codes...');

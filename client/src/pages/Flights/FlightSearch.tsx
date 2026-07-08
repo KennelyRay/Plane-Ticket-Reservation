@@ -24,7 +24,8 @@ const todayISO = () => toISODate(new Date());
 const POPULAR_ROUTES: Array<[string, string, string]> = [
   ['MNL', 'CEB', 'Cebu'],
   ['MNL', 'DVO', 'Davao'],
-  ['MNL', 'ILO', 'Iloilo'],
+  ['MNL', 'TAG', 'Bohol'],
+  ['CRK', 'CEB', 'Cebu'],
   ['MNL', 'SIN', 'Singapore'],
   ['MNL', 'NRT', 'Tokyo'],
 ];
@@ -44,6 +45,9 @@ const AIRPORT_CITIES: Record<string, string> = {
   CRK: 'Clark',
   PPS: 'Puerto Princesa',
   TAG: 'Bohol',
+  KLO: 'Kalibo (Boracay)',
+  BCD: 'Bacolod',
+  CGY: 'Cagayan de Oro',
 };
 
 const cityFor = (code: string) => AIRPORT_CITIES[code.toUpperCase()] ?? 'Airport code';
