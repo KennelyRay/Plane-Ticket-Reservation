@@ -83,15 +83,25 @@ function FlightCard({
   const { route, airline } = flight;
   const hasPath =
     route.originAirport.latitude != null && route.destinationAirport.latitude != null;
+  // Flip the map popover under the card when the card sits too close to the
+  // top of the viewport for it to fit above (measured as the hover starts).
+  const [mapBelow, setMapBelow] = useState(false);
 
   return (
     <article
-      className="group relative bg-white rounded-2xl border border-slate-200/80 shadow-soft hover:shadow-lift hover:border-brand-200 hover:-translate-y-0.5 transition-all duration-300 animate-fade-up"
+      className="group relative hover:z-20 bg-white rounded-2xl border border-slate-200/80 shadow-soft hover:shadow-lift hover:border-brand-200 hover:-translate-y-0.5 transition-all duration-300 animate-fade-up"
       style={{ animationDelay: `${Math.min(index, 8) * 60}ms` }}
+      onMouseEnter={(e) => setMapBelow(e.currentTarget.getBoundingClientRect().top < 420)}
     >
       {/* Route-map preview, revealed on hover (desktop only) */}
       {hasPath && (
-        <div className="pointer-events-none hidden lg:block absolute left-1/2 -translate-x-1/2 bottom-full mb-2 z-30 opacity-0 invisible translate-y-2 scale-95 group-hover:opacity-100 group-hover:visible group-hover:translate-y-0 group-hover:scale-100 transition-all duration-200 origin-bottom">
+        <div
+          className={`pointer-events-none hidden lg:block absolute left-1/2 -translate-x-1/2 z-30 opacity-0 invisible scale-95 group-hover:opacity-100 group-hover:visible group-hover:translate-y-0 group-hover:scale-100 transition-all duration-200 ${
+            mapBelow
+              ? 'top-full mt-2 -translate-y-2 origin-top'
+              : 'bottom-full mb-2 translate-y-2 origin-bottom'
+          }`}
+        >
           <div className="relative bg-white rounded-2xl border border-slate-200/80 shadow-lift p-2.5">
             <FlightPathMap
               airports={airports}
@@ -108,7 +118,13 @@ function FlightCard({
                   : 'Direct'}
               </span>
             </div>
-            <span className="absolute left-1/2 -translate-x-1/2 -bottom-1.5 w-3 h-3 rotate-45 bg-white border-r border-b border-slate-200/80" />
+            <span
+              className={`absolute left-1/2 -translate-x-1/2 w-3 h-3 rotate-45 bg-white ${
+                mapBelow
+                  ? '-top-1.5 border-l border-t border-slate-200/80'
+                  : '-bottom-1.5 border-r border-b border-slate-200/80'
+              }`}
+            />
           </div>
         </div>
       )}
