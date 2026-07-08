@@ -4,10 +4,12 @@ import { authService } from '../services/auth.service';
 import { loginSchema, registerSchema } from '../validators/auth.validator';
 import { env } from '../config/env';
 
+// In production the client (Vercel) and API (Railway) are on different sites,
+// so the refresh cookie must be SameSite=None; Secure to be sent cross-origin.
 const refreshCookieOptions = {
   httpOnly: true,
   secure: env.isProduction,
-  sameSite: 'lax' as const,
+  sameSite: env.isProduction ? ('none' as const) : ('lax' as const),
   path: '/api/auth',
   maxAge: 7 * 24 * 60 * 60 * 1000,
 };

@@ -9,7 +9,7 @@ Scalable full-stack flight booking platform.
 | Frontend | React 19 + TypeScript + Vite, Tailwind CSS v4, React Router, TanStack Query, Zustand, Axios, React Hook Form + Zod |
 | Backend  | Node.js + Express 5 + TypeScript, Prisma 6, Socket.IO, JWT (access + refresh cookie) |
 | Database | PostgreSQL (NeonDB), Redis (seat locking — optional in dev) |
-| Hosting  | Vercel (client) |
+| Hosting  | Vercel (client) + Railway (API server) |
 
 ## Getting started
 
@@ -68,6 +68,25 @@ Seats are held for **5 minutes** when selected. Locks live in Redis when
 `REDIS_URL` is set; otherwise an in-memory store is used (dev only — set
 `REDIS_URL` in production). Lock/release events broadcast over Socket.IO
 (`seat:locked`, `seat:released`) to everyone viewing that flight's seat map.
+
+## Deployment
+
+**Client → Vercel**: import the GitHub repo; the root `vercel.json` builds
+`client/` and adds SPA rewrites. Set env var `VITE_API_URL` to
+`https://<railway-domain>/api`.
+
+**Server → Railway**: create a service from this repo with **Root Directory =
+`server`** (`server/railway.json` configures build, start, and the
+`/api/health` healthcheck). Required env vars:
+
+| Variable | Value |
+|----------|-------|
+| `DATABASE_URL` | Neon pooled connection string |
+| `DIRECT_URL` | Neon direct (non-pooler) connection string |
+| `JWT_SECRET`, `JWT_REFRESH_SECRET` | long random strings |
+| `CLIENT_URL` | Vercel app URL (comma-separate multiple origins) |
+| `NODE_ENV` | `production` |
+| `REDIS_URL` | from a Railway Redis service: `${{Redis.REDIS_URL}}` |
 
 ## Roadmap (next modules)
 

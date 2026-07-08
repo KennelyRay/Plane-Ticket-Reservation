@@ -12,7 +12,11 @@ export const env = {
   nodeEnv: process.env.NODE_ENV ?? 'development',
   isProduction: process.env.NODE_ENV === 'production',
   port: Number(process.env.PORT ?? 5000),
-  clientUrl: process.env.CLIENT_URL ?? 'http://localhost:5173',
+  // Comma-separated list of allowed browser origins, e.g. "https://app.vercel.app,http://localhost:5173"
+  clientUrls: (process.env.CLIENT_URL ?? 'http://localhost:5173')
+    .split(',')
+    .map((url) => url.trim().replace(/\/$/, ''))
+    .filter(Boolean),
   databaseUrl: required('DATABASE_URL'),
   jwt: {
     secret: required('JWT_SECRET'),

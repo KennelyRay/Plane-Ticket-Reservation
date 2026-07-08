@@ -8,10 +8,13 @@ import { env } from './config/env';
 
 const app = express();
 
+// Railway/Vercel sit behind a reverse proxy; needed for secure cookies + client IPs
+app.set('trust proxy', 1);
+
 app.use(helmet());
 app.use(
   cors({
-    origin: env.clientUrl,
+    origin: env.clientUrls,
     credentials: true,
   })
 );
