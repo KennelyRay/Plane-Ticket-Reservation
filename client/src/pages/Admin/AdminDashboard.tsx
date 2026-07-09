@@ -9,7 +9,9 @@ import {
   type FlightOpStatus,
 } from '../../features/admin/api';
 import { useAuthStore } from '../../features/auth/store';
-import { PlaneIcon, TicketIcon } from '../../components/ui/icons';
+import type { Booking, BookingPassenger } from '../../features/booking/api';
+import { printBoardingPass } from '../../features/booking/printBoardingPass';
+import { CheckInIcon, PlaneIcon, TicketIcon, XIcon } from '../../components/ui/icons';
 
 type Tab = 'overview' | 'flights' | 'users';
 
@@ -632,8 +634,186 @@ function FlightsTab({ onError }: { onError: (msg: string) => void }) {
   );
 }
 
+/** Per-booking panel inside the user drawer: passengers, manual check-in, print passes. */
+function AdminBookingCard({
+  booking,
+  onCheckIn,
+  checkingIn,
+}: {
+  booking: Booking;
+  onCheckIn: (id: string) => void;
+  checkingIn: boolean;
+}) {
+  const { flight } = booking;
+  const departed = new Date(flight.departureTime) <= new Date();
+  const allCheckedIn =
+    booking.passengers.length > 0 &&
+    booking.passengers.every((p) => p.ticket?.status === 'CHECKED_IN');
+  const canCheckIn = booking.status === 'CONFIRMED' && !departed && !allCheckedIn;
+
+  return (
+    <div className="rounded-xl border border-slate-200/80 p-4">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 mb-3">
+        <span className="text-sm font-extrabold tabular-nums text-brand-700">
+          {booking.bookingReference}
+        </span>
+        <span className="text-sm font-bold text-ink">
+          {flight.route.originAirport.city} → {flight.route.destinationAirport.city}
+        </span>
+        <span className="text-xs font-medium text-ink-soft">
+          {flight.airline.name} · {flight.flightNumber} · {formatDateTime(flight.departureTime)}
+        </span>
+        <span className={`ml-auto ${statusBadge(booking.status)}`}>{booking.status}</span>
+      </div>
+
+      <ul className="divide-y divide-slate-100 border-y border-slate-100">
+        {booking.passengers.map((bp: BookingPassenger) => {
+          const checkedIn = bp.ticket?.status === 'CHECKED_IN';
+          const hasPass = Boolean(bp.ticket?.boardingPass);
+          return (
+            <li key={bp.id} className="py-2.5 flex items-center gap-3">
+              <span className="w-9 h-9 shrink-0 rounded-lg bg-gradient-to-br from-brand-600 to-violet-glow text-white text-[11px] font-bold flex items-center justify-center">
+                {bp.seat?.seatNumber ?? '—'}
+              </span>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-bold text-ink truncate">
+                  {bp.passenger.firstName} {bp.passenger.lastName}
+                </p>
+                <p className="text-xs font-medium text-ink-soft">
+                  {bp.cabinClass === 'BUSINESS' ? 'Business' : 'Economy'}
+                  {bp.seat && ` · seat ${bp.seat.seatNumber}`}
+                </p>
+              </div>
+              {checkedIn ? (
+                <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide text-emerald-600">
+                  <CheckInIcon className="w-3.5 h-3.5" /> Checked in
+                </span>
+              ) : (
+                <span className="text-[10px] font-bold uppercase tracking-wide text-ink-soft">
+                  Not checked in
+                </span>
+              )}
+              {hasPass && (
+                <button
+                  onClick={() => printBoardingPass(booking, bp)}
+                  className={`${actionBtn} border-brand-200 bg-brand-50 text-brand-700 hover:bg-brand-100`}
+                >
+                  Print pass
+                </button>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+
+      <div className="flex items-center justify-between gap-3 mt-3">
+        <span className="text-xs font-semibold text-ink-soft">
+          {booking.passengers.length}{' '}
+          {booking.passengers.length === 1 ? 'passenger' : 'passengers'} · {peso(booking.totalAmount)}
+        </span>
+        {canCheckIn ? (
+          <button
+            onClick={() => onCheckIn(booking.id)}
+            disabled={checkingIn}
+            className={`${actionBtn} border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100`}
+          >
+            {checkingIn ? 'Checking in…' : 'Manual check-in'}
+          </button>
+        ) : departed && booking.status === 'CONFIRMED' && !allCheckedIn ? (
+          <span className="text-xs font-medium text-ink-soft">Flight departed</span>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+function UserBookingsModal({
+  userId,
+  onClose,
+  onError,
+}: {
+  userId: string;
+  onClose: () => void;
+  onError: (msg: string) => void;
+}) {
+  const queryClient = useQueryClient();
+  const { data, isLoading } = useQuery({
+    queryKey: ['admin', 'user-bookings', userId],
+    queryFn: () => adminApi.userBookings(userId),
+  });
+
+  const checkIn = useMutation({
+    mutationFn: (bookingId: string) => adminApi.checkInBooking(bookingId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'user-bookings', userId] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'stats'] });
+    },
+    onError: (err) =>
+      onError(
+        isAxiosError(err) ? err.response?.data?.message ?? 'Check-in failed' : 'Check-in failed'
+      ),
+  });
+
+  return (
+    <div
+      className="fixed inset-0 z-40 flex items-start justify-center overflow-y-auto bg-ink/40 backdrop-blur-sm p-4 sm:p-8 animate-fade-in"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-2xl bg-white rounded-2xl border border-slate-200/80 shadow-lift my-auto animate-fade-up"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between gap-3 p-5 border-b border-slate-100">
+          <div className="min-w-0">
+            <p className="text-[11px] font-bold uppercase tracking-wide text-ink-soft">
+              Customer bookings
+            </p>
+            <h2 className="text-lg font-extrabold tracking-tight truncate">
+              {data ? `${data.user.firstName} ${data.user.lastName}` : 'Loading…'}
+              {data && (
+                <span className="ml-2 text-sm font-semibold text-ink-soft">{data.user.email}</span>
+              )}
+            </h2>
+          </div>
+          <button
+            onClick={onClose}
+            className="w-9 h-9 shrink-0 rounded-lg border border-slate-200 text-ink-soft hover:bg-slate-50 flex items-center justify-center"
+            aria-label="Close"
+          >
+            <XIcon className="w-4 h-4" />
+          </button>
+        </div>
+
+        <div className="p-5 space-y-4 max-h-[70vh] overflow-y-auto">
+          {isLoading ? (
+            <div className="h-40 animate-pulse bg-slate-50 rounded-xl" />
+          ) : !data || data.bookings.length === 0 ? (
+            <div className="text-center py-10">
+              <p className="text-3xl mb-2">🧳</p>
+              <p className="font-bold text-ink">No bookings yet</p>
+              <p className="text-sm text-ink-soft mt-1">
+                This customer hasn't made any reservations.
+              </p>
+            </div>
+          ) : (
+            data.bookings.map((b) => (
+              <AdminBookingCard
+                key={b.id}
+                booking={b}
+                onCheckIn={(id) => checkIn.mutate(id)}
+                checkingIn={checkIn.isPending && checkIn.variables === b.id}
+              />
+            ))
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function UsersTab({ onError }: { onError: (msg: string) => void }) {
   const [page, setPage] = useState(1);
+  const [openUserId, setOpenUserId] = useState<string | null>(null);
   const queryClient = useQueryClient();
   const me = useAuthStore((s) => s.user);
 
@@ -651,6 +831,7 @@ function UsersTab({ onError }: { onError: (msg: string) => void }) {
   });
 
   return (
+    <>
     <div className="bg-white rounded-2xl border border-slate-200/80 shadow-soft p-5">
       <p className="text-[11px] font-bold uppercase tracking-wide text-ink-soft mb-4">User accounts</p>
 
@@ -675,13 +856,17 @@ function UsersTab({ onError }: { onError: (msg: string) => void }) {
                   return (
                     <tr key={u.id}>
                       <td className="py-3 pr-4">
-                        <div className="flex items-center gap-2.5 min-w-0">
+                        <button
+                          onClick={() => setOpenUserId(u.id)}
+                          className="flex items-center gap-2.5 min-w-0 text-left group"
+                          title="View bookings"
+                        >
                           <span className="w-8 h-8 shrink-0 rounded-full bg-gradient-to-br from-brand-600 to-violet-glow text-white text-[10px] font-bold flex items-center justify-center">
                             {u.firstName[0]}
                             {u.lastName[0]}
                           </span>
                           <div className="min-w-0">
-                            <p className="font-bold text-ink text-sm truncate">
+                            <p className="font-bold text-ink text-sm truncate group-hover:text-brand-700 transition-colors">
                               {u.firstName} {u.lastName}
                               {isSelf && (
                                 <span className="ml-1.5 text-[10px] font-bold text-brand-600">
@@ -691,7 +876,7 @@ function UsersTab({ onError }: { onError: (msg: string) => void }) {
                             </p>
                             <p className="text-xs font-medium text-ink-soft truncate">{u.email}</p>
                           </div>
-                        </div>
+                        </button>
                       </td>
                       <td className="py-3 pr-4">
                         <select
@@ -710,7 +895,12 @@ function UsersTab({ onError }: { onError: (msg: string) => void }) {
                         </select>
                       </td>
                       <td className="py-3 pr-4 text-xs font-semibold tabular-nums">
-                        {u.bookingsCount}
+                        <button
+                          onClick={() => setOpenUserId(u.id)}
+                          className="font-bold text-brand-600 hover:underline disabled:text-ink-soft disabled:no-underline"
+                        >
+                          {u.bookingsCount} {u.bookingsCount === 1 ? 'booking' : 'bookings'} →
+                        </button>
                       </td>
                       <td className="py-3 pr-4">
                         <span className={statusBadge(u.status)}>{u.status}</span>
@@ -750,6 +940,14 @@ function UsersTab({ onError }: { onError: (msg: string) => void }) {
         </>
       )}
     </div>
+    {openUserId && (
+      <UserBookingsModal
+        userId={openUserId}
+        onClose={() => setOpenUserId(null)}
+        onError={onError}
+      />
+    )}
+    </>
   );
 }
 

@@ -1,5 +1,6 @@
 import { api } from '../../services/api';
 import type { ApiResponse, Pagination } from '../../types';
+import type { Booking } from '../booking/api';
 
 export interface AdminFlight {
   id: string;
@@ -31,6 +32,17 @@ export interface AdminUser {
   isEmailVerified: boolean;
   createdAt: string;
   bookingsCount: number;
+}
+
+export interface AdminUserBookings {
+  user: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    role: string;
+  };
+  bookings: Booking[];
 }
 
 export interface AdminStats {
@@ -145,5 +157,17 @@ export const adminApi = {
       input
     );
     return data.data.user;
+  },
+
+  async userBookings(userId: string) {
+    const { data } = await api.get<ApiResponse<AdminUserBookings>>(
+      `/admin/users/${userId}/bookings`
+    );
+    return data.data;
+  },
+
+  async checkInBooking(bookingId: string) {
+    const { data } = await api.post<ApiResponse<Booking>>(`/admin/bookings/${bookingId}/check-in`);
+    return data.data;
   },
 };

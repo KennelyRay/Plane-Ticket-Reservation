@@ -17,6 +17,9 @@ router.post('/flights/:id/reinstate', adminController.reinstateFlight);
 router.post('/flights/:id/status', adminController.setFlightStatus);
 
 router.get('/users', adminController.listUsers);
+router.get('/users/:id/bookings', adminController.userBookings);
 router.patch('/users/:id', adminController.updateUser);
+
+router.post('/bookings/:id/check-in', adminController.checkInBooking);
 
 export default router;

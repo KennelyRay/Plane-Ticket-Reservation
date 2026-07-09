@@ -1,6 +1,9 @@
 import { Prisma } from '@prisma/client';
 import { ApiError } from '../utils/ApiError';
 import { adminRepository } from '../repositories/admin.repository';
+import { bookingRepository } from '../repositories/booking.repository';
+import { checkinService } from './checkin.service';
+import { AuthUser } from '../middleware/auth';
 import {
   UpdateFlightInput,
   UpdateUserInput,
@@ -220,6 +223,31 @@ export const adminService = {
       })),
       pagination: { page, pageSize, total, totalPages: Math.ceil(total / pageSize) },
     };
+  },
+
+  /** All bookings for a given customer, for the admin oversight view. */
+  async getUserBookings(userId: string) {
+    const user = await adminRepository.findUserById(userId);
+    if (!user) throw ApiError.notFound('User not found');
+
+    await bookingRepository.expireStale({ userId });
+    const bookings = await bookingRepository.findByUser(userId);
+
+    return {
+      user: {
+        id: user.id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        role: user.role.name,
+      },
+      bookings,
+    };
+  },
+
+  /** Manual (counter) check-in performed by an admin — bypasses the 24h window. */
+  async checkInBooking(bookingId: string, actor: AuthUser) {
+    return checkinService.checkIn(bookingId, actor, { overrideWindow: true });
   },
 
   async updateUser(actorId: string, userId: string, input: UpdateUserInput) {

@@ -52,6 +52,16 @@ export const adminController = {
     res.json({ success: true, data: result });
   }),
 
+  userBookings: asyncHandler(async (req: Request, res: Response) => {
+    const result = await adminService.getUserBookings(String(req.params.id));
+    res.json({ success: true, data: result });
+  }),
+
+  checkInBooking: asyncHandler(async (req: Request, res: Response) => {
+    const booking = await adminService.checkInBooking(String(req.params.id), req.user!);
+    res.json({ success: true, data: booking });
+  }),
+
   updateUser: asyncHandler(async (req: Request, res: Response) => {
     const input = updateUserSchema.parse(req.body);
     const user = await adminService.updateUser(req.user!.id, String(req.params.id), input);

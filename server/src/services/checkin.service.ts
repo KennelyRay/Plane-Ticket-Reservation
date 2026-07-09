@@ -9,8 +9,12 @@ const ticketNumberFor = (bookingReference: string, sequence: number) =>
   `TKT-${bookingReference.replace('VF-', '')}-${String(sequence).padStart(2, '0')}`;
 
 export const checkinService = {
-  /** Online check-in: issues CHECKED_IN tickets + boarding passes for every passenger. */
-  async checkIn(bookingId: string, user: AuthUser) {
+  /**
+   * Online check-in: issues CHECKED_IN tickets + boarding passes for every passenger.
+   * `overrideWindow` lets staff/admins check a passenger in before the 24h window opens
+   * (e.g. manual check-in at the counter).
+   */
+  async checkIn(bookingId: string, user: AuthUser, opts: { overrideWindow?: boolean } = {}) {
     const booking = await bookingRepository.findById(bookingId);
     if (!booking || (booking.userId !== user.id && user.role !== 'ADMIN'))
       throw ApiError.notFound('Booking not found');
@@ -22,7 +26,7 @@ export const checkinService = {
     const opensAt = new Date(
       booking.flight.departureTime.getTime() - CHECKIN_OPENS_HOURS_BEFORE * 60 * 60 * 1000
     );
-    if (now < opensAt)
+    if (!opts.overrideWindow && now < opensAt)
       throw ApiError.badRequest(
         `Check-in opens ${CHECKIN_OPENS_HOURS_BEFORE} hours before departure`
       );
