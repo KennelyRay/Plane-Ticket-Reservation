@@ -6,7 +6,7 @@ import { seatApi, type SeatMapSeat } from '../../features/seat/api';
 import { useSeatSocket } from '../../hooks/useSeatSocket';
 import SeatMap from '../../components/seatmap/SeatMap';
 import LockCountdown from '../../components/booking/LockCountdown';
-import { AlertIcon, PlaneIcon, SeatIcon } from '../../components/ui/icons';
+import { AlertIcon, ClockIcon, PlaneIcon, SeatIcon } from '../../components/ui/icons';
 
 const formatTime = (iso: string) =>
   new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -51,8 +51,14 @@ export default function SeatSelection() {
     onError: invalidate,
   });
 
+  const departed = !!data && new Date(data.flight.departureTime) <= new Date();
+
   const handleSeatClick = (seat: SeatMapSeat) => {
     setError(null);
+    if (departed) {
+      setError('This flight has already departed — seats can no longer be selected.');
+      return;
+    }
     if (seat.lockedByMe) releaseMutation.mutate(seat);
     else if (seat.status === 'AVAILABLE') lockMutation.mutate(seat);
   };
@@ -120,6 +126,13 @@ export default function SeatSelection() {
             </p>
           </div>
         </div>
+
+        {departed && (
+          <div className="mb-4 p-3.5 rounded-xl bg-slate-100 border border-slate-200 text-ink-soft text-sm font-semibold animate-fade-in flex items-center gap-2">
+            <ClockIcon className="w-4 h-4 shrink-0" />
+            This flight has already departed — seats can no longer be selected.
+          </div>
+        )}
 
         {error && (
           <div className="mb-4 p-3.5 rounded-xl bg-red-50 border border-red-100 text-red-700 text-sm font-medium animate-fade-in">

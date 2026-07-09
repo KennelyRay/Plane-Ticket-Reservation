@@ -42,6 +42,12 @@ export const seatService = {
   },
 
   async lockSeat(flightId: string, seatId: string, userId: string) {
+    const flight = await flightRepository.findById(flightId);
+    if (!flight) throw ApiError.notFound('Flight not found');
+    if (flight.status === 'CANCELLED') throw ApiError.badRequest('This flight has been cancelled');
+    if (flight.departureTime <= new Date())
+      throw ApiError.badRequest('This flight has already departed');
+
     const seats = await seatRepository.findByFlightId(flightId);
     const seat = seats.find((s) => s.id === seatId);
     if (!seat) throw ApiError.notFound('Seat not found on this flight');

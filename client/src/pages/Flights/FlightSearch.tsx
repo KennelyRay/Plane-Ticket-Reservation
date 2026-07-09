@@ -7,7 +7,7 @@ import { RETURN_LEG_KEY, type ReturnLeg } from '../../features/booking/returnLeg
 import type { Airport, Flight } from '../../types';
 import AirportSelect from '../../components/ui/AirportSelect';
 import FlightPathMap from '../../components/flights/FlightPathMap';
-import { AlertIcon, MapIcon, PlaneIcon, SearchIcon, ShieldIcon, SparkIcon, SwapIcon, TicketIcon, XIcon } from '../../components/ui/icons';
+import { AlertIcon, ClockIcon, MapIcon, PlaneIcon, SearchIcon, ShieldIcon, SparkIcon, SwapIcon, TicketIcon, XIcon } from '../../components/ui/icons';
 
 const formatTime = (iso: string) =>
   new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -145,12 +145,14 @@ function FlightCard({
   badge,
   airports,
   onSelect,
+  departed = false,
 }: {
   flight: Flight;
   index: number;
   badge?: Badge;
   airports: Airport[];
   onSelect: (flight: Flight) => void;
+  departed?: boolean;
 }) {
   const { route, airline } = flight;
   const hasPath =
@@ -162,7 +164,11 @@ function FlightCard({
 
   return (
     <article
-      className="group relative hover:z-20 bg-white rounded-2xl border border-slate-200/80 shadow-soft hover:shadow-lift hover:border-brand-200 hover:-translate-y-0.5 transition-all duration-300 animate-fade-up"
+      className={`group relative hover:z-20 bg-white rounded-2xl border shadow-soft transition-all duration-300 animate-fade-up ${
+        departed
+          ? 'border-slate-200/70 opacity-75'
+          : 'border-slate-200/80 hover:shadow-lift hover:border-brand-200 hover:-translate-y-0.5'
+      }`}
       style={{ animationDelay: `${Math.min(index, 8) * 60}ms` }}
       onMouseEnter={(e) => setMapBelow(e.currentTarget.getBoundingClientRect().top < 420)}
     >
@@ -216,16 +222,24 @@ function FlightCard({
               </p>
             </div>
             <div className="ml-auto flex items-center gap-2 shrink-0">
-              {badge && (
-                <span
-                  className={`px-2.5 py-1 rounded-full border text-[10px] font-bold uppercase tracking-wide ${BADGES[badge].className}`}
-                >
-                  {BADGES[badge].label}
+              {departed ? (
+                <span className="px-2.5 py-1 rounded-full border border-slate-200 bg-slate-100 text-[10px] font-bold uppercase tracking-wide text-ink-soft">
+                  Departed
                 </span>
+              ) : (
+                <>
+                  {badge && (
+                    <span
+                      className={`px-2.5 py-1 rounded-full border text-[10px] font-bold uppercase tracking-wide ${BADGES[badge].className}`}
+                    >
+                      {BADGES[badge].label}
+                    </span>
+                  )}
+                  <span className="hidden sm:inline-flex px-2.5 py-1 rounded-full border border-slate-200 bg-slate-50 text-[10px] font-bold uppercase tracking-wide text-ink-soft">
+                    Direct
+                  </span>
+                </>
               )}
-              <span className="hidden sm:inline-flex px-2.5 py-1 rounded-full border border-slate-200 bg-slate-50 text-[10px] font-bold uppercase tracking-wide text-ink-soft">
-                Direct
-              </span>
             </div>
           </div>
 
@@ -305,12 +319,18 @@ function FlightCard({
             )}
           </div>
 
-          <button
-            onClick={() => onSelect(flight)}
-            className="h-11 px-5 lg:w-full rounded-xl text-sm font-bold text-white bg-gradient-to-r from-brand-600 to-violet-glow shadow-soft hover:shadow-lift hover:opacity-95 active:scale-[0.98] transition-all shrink-0"
-          >
-            Select seats
-          </button>
+          {departed ? (
+            <span className="h-11 px-5 lg:w-full rounded-xl inline-flex items-center justify-center text-sm font-bold text-ink-soft bg-slate-100 border border-slate-200 cursor-not-allowed shrink-0">
+              Departed
+            </span>
+          ) : (
+            <button
+              onClick={() => onSelect(flight)}
+              className="h-11 px-5 lg:w-full rounded-xl text-sm font-bold text-white bg-gradient-to-r from-brand-600 to-violet-glow shadow-soft hover:shadow-lift hover:opacity-95 active:scale-[0.98] transition-all shrink-0"
+            >
+              Select seats
+            </button>
+          )}
 
           <div
             aria-hidden
@@ -493,17 +513,27 @@ export default function FlightSearch() {
     return airlineFilter ? list.filter((f) => f.airline.iataCode === airlineFilter) : list;
   }, [data, airlineFilter]);
 
-  // Highlight the best fares on the page (only meaningful with 2+ options)
+  // Split already-departed flights out — they can't be booked and drop into their
+  // own section below the bookable results.
+  const { bookableFlights, departedFlights } = useMemo(() => {
+    const now = Date.now();
+    return {
+      bookableFlights: visibleFlights.filter((f) => new Date(f.departureTime).getTime() > now),
+      departedFlights: visibleFlights.filter((f) => new Date(f.departureTime).getTime() <= now),
+    };
+  }, [visibleFlights]);
+
+  // Highlight the best fares among bookable flights (only meaningful with 2+ options)
   const highlights = useMemo(() => {
-    if (visibleFlights.length < 2) return { cheapestId: null, fastestId: null };
-    let cheapest = visibleFlights[0];
-    let fastest = visibleFlights[0];
-    for (const f of visibleFlights) {
+    if (bookableFlights.length < 2) return { cheapestId: null, fastestId: null };
+    let cheapest = bookableFlights[0];
+    let fastest = bookableFlights[0];
+    for (const f of bookableFlights) {
       if (Number(f.economyPrice) < Number(cheapest.economyPrice)) cheapest = f;
       if (f.route.durationMinutes < fastest.route.durationMinutes) fastest = f;
     }
     return { cheapestId: cheapest.id, fastestId: fastest.id };
-  }, [visibleFlights]);
+  }, [bookableFlights]);
 
   const badgeFor = (f: Flight): Badge | undefined =>
     f.id === highlights.cheapestId ? 'cheapest' : f.id === highlights.fastestId ? 'fastest' : undefined;
@@ -885,7 +915,7 @@ export default function FlightSearch() {
             )}
 
             <div className={`space-y-3.5 ${isPlaceholderData ? 'opacity-60' : ''}`}>
-              {visibleFlights.map((flight, i) => (
+              {bookableFlights.map((flight, i) => (
                 <FlightCard
                   key={flight.id}
                   flight={flight}
@@ -903,6 +933,30 @@ export default function FlightSearch() {
                 </div>
               )}
             </div>
+
+            {departedFlights.length > 0 && (
+              <section className={`mt-8 ${isPlaceholderData ? 'opacity-60' : ''}`}>
+                <div className="flex items-center gap-2 mb-3">
+                  <ClockIcon className="w-4 h-4 text-ink-soft" />
+                  <h3 className="text-sm font-extrabold uppercase tracking-wide text-ink-soft">
+                    Departed
+                  </h3>
+                  <span className="text-xs font-medium text-ink-soft">· no longer bookable</span>
+                </div>
+                <div className="space-y-3.5">
+                  {departedFlights.map((flight, i) => (
+                    <FlightCard
+                      key={flight.id}
+                      flight={flight}
+                      index={i}
+                      airports={airports}
+                      onSelect={selectFlight}
+                      departed
+                    />
+                  ))}
+                </div>
+              </section>
+            )}
 
             {pagination && pagination.totalPages > 1 && (
               <div className="mt-6 flex items-center justify-center gap-3">

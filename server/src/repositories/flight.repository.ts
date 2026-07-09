@@ -45,6 +45,12 @@ export const flightRepository = {
       const end = new Date(start);
       end.setDate(end.getDate() + 1);
       where.departureTime = { gte: start, lt: end };
+    } else {
+      // Browsing without a date: only from today onward — earlier days are gone.
+      // Today's already-departed flights still surface (as a non-bookable section).
+      const startOfToday = new Date();
+      startOfToday.setHours(0, 0, 0, 0);
+      where.departureTime = { gte: startOfToday };
     }
 
     return prisma.$transaction([

@@ -63,36 +63,40 @@ export default function MyBookings() {
             <li key={booking.id}>
               <Link
                 to={`/bookings/${booking.id}`}
-                className="group block bg-white rounded-2xl border border-slate-200/80 shadow-soft p-5 sm:p-6 hover:shadow-lift hover:border-brand-200 hover:-translate-y-0.5 transition-all duration-300"
+                className="group block bg-white rounded-2xl border border-slate-200/80 shadow-soft p-4 sm:p-5 hover:shadow-lift hover:border-brand-200 hover:-translate-y-0.5 transition-all duration-300"
               >
-                <div className="flex flex-wrap items-center gap-x-5 gap-y-3">
-                  <span className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-600 to-violet-glow text-white flex items-center justify-center group-hover:scale-110 transition-transform">
+                <div className="flex items-start gap-3">
+                  <span className="w-10 h-10 shrink-0 rounded-xl bg-gradient-to-br from-brand-600 to-violet-glow text-white flex items-center justify-center group-hover:scale-110 transition-transform">
                     <PlaneIcon className="w-4.5 h-4.5 -rotate-45" />
                   </span>
                   <div className="flex-1 min-w-0">
-                    <p className="font-extrabold tracking-tight">
-                      {booking.flight.route.originAirport.city} →{' '}
-                      {booking.flight.route.destinationAirport.city}
-                    </p>
-                    <p className="text-xs font-semibold text-ink-soft">
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="font-extrabold tracking-tight truncate">
+                        {booking.flight.route.originAirport.city} →{' '}
+                        {booking.flight.route.destinationAirport.city}
+                      </p>
+                      <span
+                        className={`shrink-0 px-2.5 py-1 rounded-full border text-[11px] font-bold capitalize ${statusChip[booking.status]}`}
+                      >
+                        {booking.status.toLowerCase()}
+                      </span>
+                    </div>
+                    <p className="text-xs font-semibold text-ink-soft mt-0.5 truncate">
                       {booking.flight.airline.name} · {booking.flight.flightNumber} ·{' '}
                       {formatDate(booking.flight.departureTime)} ·{' '}
                       {formatTime(booking.flight.departureTime)}
                     </p>
+                    <div className="flex items-center justify-between gap-2 mt-2.5 pt-2.5 border-t border-slate-100">
+                      <span className="text-sm font-extrabold tabular-nums text-brand-700">
+                        {booking.bookingReference}
+                      </span>
+                      <span className="text-xs font-semibold text-ink-soft">
+                        {booking.passengers.length}{' '}
+                        {booking.passengers.length === 1 ? 'passenger' : 'passengers'} · ₱
+                        {Number(booking.totalAmount).toLocaleString()}
+                      </span>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-sm font-extrabold tabular-nums">{booking.bookingReference}</p>
-                    <p className="text-xs font-semibold text-ink-soft">
-                      {booking.passengers.length}{' '}
-                      {booking.passengers.length === 1 ? 'passenger' : 'passengers'} · ₱
-                      {Number(booking.totalAmount).toLocaleString()}
-                    </p>
-                  </div>
-                  <span
-                    className={`px-3 py-1.5 rounded-full border text-xs font-bold capitalize ${statusChip[booking.status]}`}
-                  >
-                    {booking.status.toLowerCase()}
-                  </span>
                 </div>
               </Link>
             </li>
