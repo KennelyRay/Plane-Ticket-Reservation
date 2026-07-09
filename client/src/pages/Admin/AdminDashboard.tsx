@@ -1,7 +1,13 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { isAxiosError } from 'axios';
-import { adminApi, type AdminFlight, type AdminUser } from '../../features/admin/api';
+import {
+  adminApi,
+  type AdminFlight,
+  type AdminStats,
+  type AdminUser,
+  type FlightOpStatus,
+} from '../../features/admin/api';
 import { useAuthStore } from '../../features/auth/store';
 import { PlaneIcon, TicketIcon } from '../../components/ui/icons';
 
@@ -17,6 +23,17 @@ const ROLES = [
   'ADMIN',
 ];
 
+/** Operational lifecycle: current status → the action that advances it. */
+const NEXT_STATUS: Record<string, { to: FlightOpStatus; label: string }> = {
+  SCHEDULED: { to: 'BOARDING', label: 'Board' },
+  DELAYED: { to: 'BOARDING', label: 'Board' },
+  BOARDING: { to: 'DEPARTED', label: 'Depart' },
+  DEPARTED: { to: 'IN_AIR', label: 'Mark airborne' },
+  IN_AIR: { to: 'ARRIVED', label: 'Mark arrived' },
+};
+
+const peso = (n: number | string) => `₱${Number(n).toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
+
 const formatDateTime = (iso: string) =>
   new Date(iso).toLocaleString([], {
     month: 'short',
@@ -29,7 +46,7 @@ const statusBadge = (status: string) => {
   const styles: Record<string, string> = {
     SCHEDULED: 'bg-emerald-50 border-emerald-200 text-emerald-700',
     BOARDING: 'bg-sky-50 border-sky-200 text-sky-700',
-    DEPARTED: 'bg-slate-100 border-slate-200 text-ink-soft',
+    DEPARTED: 'bg-indigo-50 border-indigo-200 text-indigo-700',
     IN_AIR: 'bg-sky-50 border-sky-200 text-sky-700',
     ARRIVED: 'bg-slate-100 border-slate-200 text-ink-soft',
     DELAYED: 'bg-amber-50 border-amber-200 text-amber-700',
@@ -39,6 +56,8 @@ const statusBadge = (status: string) => {
     SUSPENDED: 'bg-red-50 border-red-200 text-red-700',
     PENDING: 'bg-amber-50 border-amber-200 text-amber-700',
     CONFIRMED: 'bg-emerald-50 border-emerald-200 text-emerald-700',
+    COMPLETED: 'bg-slate-100 border-slate-200 text-ink-soft',
+    EXPIRED: 'bg-slate-100 border-slate-200 text-ink-soft',
   };
   return `inline-flex px-2 py-0.5 rounded-full border text-[10px] font-bold uppercase tracking-wide ${
     styles[status] ?? 'bg-slate-100 border-slate-200 text-ink-soft'
@@ -58,6 +77,169 @@ function StatCard({ label, value, hint }: { label: string; value: string; hint?:
   );
 }
 
+function CardShell({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="bg-white rounded-2xl border border-slate-200/80 shadow-soft p-5">
+      <p className="text-[11px] font-bold uppercase tracking-wide text-ink-soft mb-4">{title}</p>
+      {children}
+    </div>
+  );
+}
+
+// ─────────────────────── Overview widgets ───────────────────────
+
+/** Seat load factor — a core airline KPI — as a labelled progress meter. */
+function LoadFactorMeter({ loadFactor }: { loadFactor: AdminStats['loadFactor'] }) {
+  const { percent, seatsSold, capacity } = loadFactor;
+  const tone =
+    percent >= 80 ? 'text-emerald-600' : percent >= 50 ? 'text-brand-600' : 'text-amber-600';
+  const bar =
+    percent >= 80 ? 'bg-emerald-500' : percent >= 50 ? 'bg-brand-600' : 'bg-amber-500';
+
+  return (
+    <div className="bg-white rounded-2xl border border-slate-200/80 shadow-soft p-5">
+      <div className="flex items-baseline justify-between mb-1">
+        <p className="text-[11px] font-bold uppercase tracking-wide text-ink-soft">
+          Seat load factor
+        </p>
+        <p className={`text-2xl font-extrabold tabular-nums ${tone}`}>{percent}%</p>
+      </div>
+      <div className="h-2.5 rounded-full bg-slate-100 overflow-hidden">
+        <div
+          className={`h-full rounded-full ${bar} transition-[width] duration-500`}
+          style={{ width: `${Math.min(100, percent)}%` }}
+        />
+      </div>
+      <p className="text-xs font-medium text-ink-soft mt-2 tabular-nums">
+        {seatsSold.toLocaleString()} of {capacity.toLocaleString()} seats sold on upcoming flights
+      </p>
+    </div>
+  );
+}
+
+/** Single-series revenue-over-time: brand-hue bars, rounded ends, per-bar hover. */
+function RevenueTrend({ trend }: { trend: AdminStats['revenueTrend'] }) {
+  const max = Math.max(1, ...trend.map((d) => d.revenue));
+  const total = trend.reduce((sum, d) => sum + d.revenue, 0);
+  const weekday = (date: string) =>
+    new Date(`${date}T00:00:00`).toLocaleDateString([], { weekday: 'short' });
+
+  return (
+    <div className="bg-white rounded-2xl border border-slate-200/80 shadow-soft p-5">
+      <div className="flex items-baseline justify-between mb-4">
+        <p className="text-[11px] font-bold uppercase tracking-wide text-ink-soft">
+          Revenue · last 7 days
+        </p>
+        <p className="text-sm font-extrabold tabular-nums">{peso(total)}</p>
+      </div>
+
+      {total === 0 ? (
+        <div className="h-40 flex items-center justify-center text-sm font-medium text-ink-soft">
+          No paid revenue in the last 7 days.
+        </div>
+      ) : (
+        <div className="flex items-end gap-2 h-40">
+          {trend.map((d) => {
+            const pct = (d.revenue / max) * 100;
+            return (
+              <div key={d.date} className="group relative flex-1 flex flex-col items-center gap-2">
+                <div className="relative w-full flex-1 flex items-end">
+                  <div
+                    className="w-full rounded-t-[4px] bg-brand-600 group-hover:bg-brand-700 transition-colors"
+                    style={{ height: `${Math.max(pct, d.revenue > 0 ? 3 : 0)}%` }}
+                  />
+                  {/* hover tooltip */}
+                  <div className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 hidden group-hover:block z-10 whitespace-nowrap rounded-lg bg-ink text-white text-[11px] font-semibold px-2 py-1 shadow-lift">
+                    {weekday(d.date)} · {peso(d.revenue)}
+                  </div>
+                </div>
+                <span className="text-[10px] font-bold text-ink-soft">{weekday(d.date)}</span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function FinancialsCard({ financials }: { financials: AdminStats['financials'] }) {
+  const rows = [
+    { label: 'Paid revenue', value: peso(financials.paidRevenue), tone: 'text-emerald-600' },
+    { label: 'Pending (unpaid)', value: peso(financials.pendingRevenue), tone: 'text-amber-600' },
+    { label: 'Refunded', value: `−${peso(financials.refunded)}`, tone: 'text-red-600' },
+    { label: 'Avg booking value', value: peso(financials.avgBookingValue), tone: 'text-ink' },
+  ];
+  return (
+    <CardShell title="Financials">
+      <ul className="space-y-3">
+        {rows.map((r) => (
+          <li key={r.label} className="flex items-center justify-between">
+            <span className="text-sm font-medium text-ink-soft">{r.label}</span>
+            <span className={`text-sm font-extrabold tabular-nums ${r.tone}`}>{r.value}</span>
+          </li>
+        ))}
+        <li className="flex items-center justify-between border-t border-slate-100 pt-3">
+          <span className="text-sm font-bold text-ink">Net revenue</span>
+          <span className="text-base font-extrabold tabular-nums text-ink">
+            {peso(financials.netRevenue)}
+          </span>
+        </li>
+      </ul>
+    </CardShell>
+  );
+}
+
+function StatusChips({ counts }: { counts: Record<string, number> }) {
+  const entries = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+  if (entries.length === 0)
+    return <p className="text-sm font-medium text-ink-soft">Nothing to show yet.</p>;
+  return (
+    <div className="flex flex-wrap gap-2">
+      {entries.map(([status, count]) => (
+        <span key={status} className={statusBadge(status)}>
+          {status.replace(/_/g, ' ')} · {count}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+function TopRoutes({ routes }: { routes: AdminStats['topRoutes'] }) {
+  const max = Math.max(1, ...routes.map((r) => r.bookings));
+  return (
+    <CardShell title="Top routes by bookings">
+      {routes.length === 0 ? (
+        <p className="text-sm font-medium text-ink-soft">No bookings yet.</p>
+      ) : (
+        <ul className="space-y-3">
+          {routes.map((r) => (
+            <li key={r.route}>
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-sm font-bold text-ink">
+                  {r.route}
+                  <span className="ml-2 text-xs font-medium text-ink-soft">
+                    {r.origin} → {r.destination}
+                  </span>
+                </span>
+                <span className="text-xs font-bold tabular-nums text-ink-soft">
+                  {r.bookings.toLocaleString()}
+                </span>
+              </div>
+              <div className="h-1.5 rounded-full bg-slate-100 overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-brand-600 to-violet-glow"
+                  style={{ width: `${(r.bookings / max) * 100}%` }}
+                />
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </CardShell>
+  );
+}
+
 function FlightRoute({ flight }: { flight: AdminFlight }) {
   return (
     <div className="min-w-0">
@@ -72,6 +254,78 @@ function FlightRoute({ flight }: { flight: AdminFlight }) {
   );
 }
 
+// ─────────────────────── Flight ops controls ───────────────────────
+
+/** Inline gate + terminal assignment. */
+function GateCell({ flight, onError }: { flight: AdminFlight; onError: (msg: string) => void }) {
+  const queryClient = useQueryClient();
+  const [editing, setEditing] = useState(false);
+  const [gate, setGate] = useState(flight.gate ?? '');
+  const [terminal, setTerminal] = useState(flight.terminal ?? '');
+
+  const mutation = useMutation({
+    mutationFn: () => adminApi.updateFlight(flight.id, { gate, terminal }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin'] });
+      setEditing(false);
+    },
+    onError: (err) =>
+      onError(isAxiosError(err) ? err.response?.data?.message ?? 'Update failed' : 'Update failed'),
+  });
+
+  if (!editing) {
+    const label =
+      flight.gate || flight.terminal
+        ? `${flight.terminal ? `T${flight.terminal}` : '—'} · ${flight.gate ?? '—'}`
+        : 'Set gate';
+    return (
+      <button
+        onClick={() => setEditing(true)}
+        className="text-xs font-semibold text-ink-soft hover:text-brand-700 underline decoration-dotted underline-offset-2"
+      >
+        {label}
+      </button>
+    );
+  }
+
+  const inputCls =
+    'rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-brand-500/60';
+
+  return (
+    <div className="flex items-center gap-1">
+      <input
+        value={terminal}
+        onChange={(e) => setTerminal(e.target.value)}
+        placeholder="T"
+        className={`${inputCls} w-9`}
+      />
+      <input
+        value={gate}
+        onChange={(e) => setGate(e.target.value)}
+        placeholder="Gate"
+        className={`${inputCls} w-14`}
+      />
+      <button
+        disabled={mutation.isPending}
+        onClick={() => mutation.mutate()}
+        className={`${actionBtn} border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100`}
+      >
+        ✓
+      </button>
+      <button
+        onClick={() => {
+          setEditing(false);
+          setGate(flight.gate ?? '');
+          setTerminal(flight.terminal ?? '');
+        }}
+        className={`${actionBtn} border-slate-200 bg-white text-ink-soft hover:bg-slate-50`}
+      >
+        ✕
+      </button>
+    </div>
+  );
+}
+
 function FlightActions({
   flight,
   onError,
@@ -80,23 +334,29 @@ function FlightActions({
   onError: (msg: string) => void;
 }) {
   const queryClient = useQueryClient();
-  const refresh = () => {
-    queryClient.invalidateQueries({ queryKey: ['admin'] });
-  };
+  const refresh = () => queryClient.invalidateQueries({ queryKey: ['admin'] });
 
   const mutation = useMutation({
     mutationFn: (action: () => Promise<AdminFlight>) => action(),
     onSuccess: refresh,
     onError: (err) =>
-      onError(
-        isAxiosError(err) ? err.response?.data?.message ?? 'Action failed' : 'Action failed'
-      ),
+      onError(isAxiosError(err) ? err.response?.data?.message ?? 'Action failed' : 'Action failed'),
   });
 
   const finished = ['DEPARTED', 'IN_AIR', 'ARRIVED'].includes(flight.status);
+  const next = NEXT_STATUS[flight.status];
 
   return (
     <div className="flex items-center justify-end gap-1.5 flex-wrap">
+      {next && (
+        <button
+          disabled={mutation.isPending}
+          onClick={() => mutation.mutate(() => adminApi.setFlightStatus(flight.id, next.to))}
+          className={`${actionBtn} border-brand-200 bg-brand-50 text-brand-700 hover:bg-brand-100`}
+        >
+          {next.label}
+        </button>
+      )}
       {flight.status !== 'CANCELLED' && (
         <>
           <button
@@ -178,31 +438,70 @@ function OverviewTab() {
   if (isLoading || !data)
     return <div className="h-48 bg-white rounded-2xl border border-slate-200/80 animate-pulse" />;
 
-  const { totals, flightStatusCounts, upcomingFlights, recentBookings } = data;
+  const {
+    totals,
+    financials,
+    loadFactor,
+    flightStatusCounts,
+    bookingStatusCounts,
+    revenueTrend,
+    topRoutes,
+    upcomingFlights,
+    recentBookings,
+  } = data;
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
-        <StatCard label="Users" value={totals.users.toLocaleString()} />
-        <StatCard label="Flights" value={totals.flights.toLocaleString()} />
-        <StatCard label="Bookings" value={totals.bookings.toLocaleString()} />
-        <StatCard label="Revenue" value={`₱${Number(totals.revenue).toLocaleString()}`} hint="Paid payments" />
-        <StatCard label="Flights today" value={totals.flightsToday.toLocaleString()} />
+      {/* Headline KPIs */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <StatCard label="Net revenue" value={peso(financials.netRevenue)} hint="Paid − refunds" />
+        <StatCard
+          label="Bookings"
+          value={totals.bookings.toLocaleString()}
+          hint={`${peso(financials.avgBookingValue)} avg value`}
+        />
+        <StatCard
+          label="Users"
+          value={totals.users.toLocaleString()}
+          hint={`+${totals.newUsers7d} this week`}
+        />
+        <StatCard
+          label="Flights today"
+          value={totals.flightsToday.toLocaleString()}
+          hint={`${totals.flights.toLocaleString()} total`}
+        />
       </div>
 
-      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-soft p-5">
-        <p className="text-[11px] font-bold uppercase tracking-wide text-ink-soft mb-3">
-          Fleet status
-        </p>
-        <div className="flex flex-wrap gap-2">
-          {Object.entries(flightStatusCounts).map(([status, count]) => (
-            <span key={status} className={statusBadge(status)}>
-              {status.replace('_', ' ')} · {count}
-            </span>
-          ))}
+      {/* Revenue trend + load factor + financials */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="lg:col-span-2">
+          <RevenueTrend trend={revenueTrend} />
+        </div>
+        <div className="space-y-4">
+          <LoadFactorMeter loadFactor={loadFactor} />
         </div>
       </div>
 
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="lg:col-span-1">
+          <FinancialsCard financials={financials} />
+        </div>
+        <div className="lg:col-span-2">
+          <TopRoutes routes={topRoutes} />
+        </div>
+      </div>
+
+      {/* Status breakdowns */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <CardShell title="Fleet status">
+          <StatusChips counts={flightStatusCounts} />
+        </CardShell>
+        <CardShell title="Booking status">
+          <StatusChips counts={bookingStatusCounts} />
+        </CardShell>
+      </div>
+
+      {/* Operational lists */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div className="bg-white rounded-2xl border border-slate-200/80 shadow-soft p-5">
           <p className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wide text-ink-soft mb-4">
@@ -216,9 +515,7 @@ function OverviewTab() {
                 <li key={f.id} className="py-2.5 flex items-center justify-between gap-3">
                   <FlightRoute flight={f} />
                   <div className="flex items-center gap-3 shrink-0">
-                    <span className="text-xs font-semibold text-ink-soft">
-                      {f.bookingsCount} bkg
-                    </span>
+                    <span className="text-xs font-semibold text-ink-soft">{f.bookingsCount} bkg</span>
                     <span className={statusBadge(f.status)}>{f.status}</span>
                   </div>
                 </li>
@@ -232,9 +529,7 @@ function OverviewTab() {
             <TicketIcon className="w-3.5 h-3.5" /> Recent bookings
           </p>
           {recentBookings.length === 0 ? (
-            <p className="text-sm font-medium text-ink-soft">
-              No bookings yet — they'll appear here once the booking flow ships.
-            </p>
+            <p className="text-sm font-medium text-ink-soft">No bookings yet.</p>
           ) : (
             <ul className="divide-y divide-slate-100">
               {recentBookings.map((b) => (
@@ -245,8 +540,7 @@ function OverviewTab() {
                       <span className="ml-2 font-semibold text-ink-soft">{b.route}</span>
                     </p>
                     <p className="text-xs font-medium text-ink-soft truncate">
-                      {b.user.firstName} {b.user.lastName} · ₱
-                      {Number(b.totalAmount).toLocaleString()}
+                      {b.user.firstName} {b.user.lastName} · {peso(b.totalAmount)}
                     </p>
                   </div>
                   <span className={statusBadge(b.status)}>{b.status}</span>
@@ -272,9 +566,7 @@ function FlightsTab({ onError }: { onError: (msg: string) => void }) {
   return (
     <div className="bg-white rounded-2xl border border-slate-200/80 shadow-soft p-5">
       <div className="flex items-center justify-between mb-4">
-        <p className="text-[11px] font-bold uppercase tracking-wide text-ink-soft">
-          Flight control
-        </p>
+        <p className="text-[11px] font-bold uppercase tracking-wide text-ink-soft">Flight control</p>
         <div className="flex rounded-lg border border-slate-200 overflow-hidden text-xs font-bold">
           {(['upcoming', 'all'] as const).map((s) => (
             <button
@@ -303,6 +595,7 @@ function FlightsTab({ onError }: { onError: (msg: string) => void }) {
                 <tr className="text-left text-[10px] font-bold uppercase tracking-wide text-ink-soft border-b border-slate-100">
                   <th className="py-2.5 pr-4">Flight</th>
                   <th className="py-2.5 pr-4">Aircraft</th>
+                  <th className="py-2.5 pr-4">Gate · Term</th>
                   <th className="py-2.5 pr-4">Bookings</th>
                   <th className="py-2.5 pr-4">Status</th>
                   <th className="py-2.5 text-right">Actions</th>
@@ -317,9 +610,10 @@ function FlightsTab({ onError }: { onError: (msg: string) => void }) {
                     <td className="py-3 pr-4 text-xs font-medium text-ink-soft whitespace-nowrap">
                       {f.aircraft.model}
                     </td>
-                    <td className="py-3 pr-4 text-xs font-semibold tabular-nums">
-                      {f.bookingsCount}
+                    <td className="py-3 pr-4 whitespace-nowrap">
+                      <GateCell flight={f} onError={onError} />
                     </td>
+                    <td className="py-3 pr-4 text-xs font-semibold tabular-nums">{f.bookingsCount}</td>
                     <td className="py-3 pr-4">
                       <span className={statusBadge(f.status)}>{f.status}</span>
                     </td>
@@ -353,16 +647,12 @@ function UsersTab({ onError }: { onError: (msg: string) => void }) {
       adminApi.updateUser(id, input),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'users'] }),
     onError: (err) =>
-      onError(
-        isAxiosError(err) ? err.response?.data?.message ?? 'Update failed' : 'Update failed'
-      ),
+      onError(isAxiosError(err) ? err.response?.data?.message ?? 'Update failed' : 'Update failed'),
   });
 
   return (
     <div className="bg-white rounded-2xl border border-slate-200/80 shadow-soft p-5">
-      <p className="text-[11px] font-bold uppercase tracking-wide text-ink-soft mb-4">
-        User accounts
-      </p>
+      <p className="text-[11px] font-bold uppercase tracking-wide text-ink-soft mb-4">User accounts</p>
 
       {isLoading || !data ? (
         <div className="h-64 animate-pulse bg-slate-50 rounded-xl" />

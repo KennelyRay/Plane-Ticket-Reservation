@@ -4,6 +4,20 @@ export const delayFlightSchema = z.object({
   minutes: z.number().int().min(5, 'Minimum delay is 5 minutes').max(1440, 'Maximum delay is 24 hours'),
 });
 
+export const updateFlightSchema = z
+  .object({
+    gate: z.string().trim().max(10, 'Gate is too long').optional(),
+    terminal: z.string().trim().max(10, 'Terminal is too long').optional(),
+    boardingTime: z.string().datetime({ message: 'Invalid boarding time' }).nullable().optional(),
+  })
+  .refine((v) => v.gate !== undefined || v.terminal !== undefined || v.boardingTime !== undefined, {
+    message: 'Provide a gate, terminal or boarding time to update',
+  });
+
+export const flightStatusSchema = z.object({
+  status: z.enum(['SCHEDULED', 'BOARDING', 'DEPARTED', 'IN_AIR', 'ARRIVED']),
+});
+
 export const updateUserSchema = z
   .object({
     status: z.enum(['ACTIVE', 'INACTIVE', 'SUSPENDED']).optional(),
@@ -25,4 +39,6 @@ export const updateUserSchema = z
   });
 
 export type DelayFlightInput = z.infer<typeof delayFlightSchema>;
+export type UpdateFlightInput = z.infer<typeof updateFlightSchema>;
+export type FlightStatusInput = z.infer<typeof flightStatusSchema>['status'];
 export type UpdateUserInput = z.infer<typeof updateUserSchema>;

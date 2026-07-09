@@ -1,7 +1,33 @@
 import { Prisma } from '@prisma/client';
 import { ApiError } from '../utils/ApiError';
 import { adminRepository } from '../repositories/admin.repository';
-import { UpdateUserInput } from '../validators/admin.validator';
+import {
+  UpdateFlightInput,
+  UpdateUserInput,
+  type FlightStatusInput,
+} from '../validators/admin.validator';
+
+/** Rolls paid payments into a dense 7-day series (oldest → newest), zero-filling gaps. */
+const buildRevenueTrend = (payments: Array<{ paidAt: Date | null; amount: Prisma.Decimal }>) => {
+  const days: Array<{ date: string; revenue: number }> = [];
+  const byDay = new Map<string, number>();
+
+  for (const p of payments) {
+    if (!p.paidAt) continue;
+    const key = p.paidAt.toISOString().slice(0, 10);
+    byDay.set(key, (byDay.get(key) ?? 0) + Number(p.amount));
+  }
+
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    d.setDate(d.getDate() - i);
+    const key = d.toISOString().slice(0, 10);
+    days.push({ date: key, revenue: byDay.get(key) ?? 0 });
+  }
+
+  return days;
+};
 
 type FlightWithRelations = Awaited<
   ReturnType<typeof adminRepository.listFlights>
@@ -27,30 +53,49 @@ const toAdminFlight = (flight: FlightWithRelations) => ({
 
 export const adminService = {
   async getStats() {
-    const [
-      totalUsers,
-      totalFlights,
-      totalBookings,
-      revenueAgg,
-      flightsToday,
-      statusGroups,
-      upcomingFlights,
-      recentBookings,
-    ] = await adminRepository.getStats();
+    const s = await adminRepository.getStats();
+
+    const paidRevenue = Number(s.revenueAgg._sum.amount ?? 0);
+    const pendingRevenue = Number(s.pendingRevenueAgg._sum.totalAmount ?? 0);
+    const refunded = Number(s.refundedAgg._sum.amount ?? 0);
+    const avgBookingValue = Number(s.avgBookingAgg._avg.totalAmount ?? 0);
 
     return {
       totals: {
-        users: totalUsers,
-        flights: totalFlights,
-        bookings: totalBookings,
-        revenue: revenueAgg._sum.amount ?? 0,
-        flightsToday,
+        users: s.totalUsers,
+        flights: s.totalFlights,
+        bookings: s.totalBookings,
+        revenue: paidRevenue,
+        flightsToday: s.flightsToday,
+        newUsers7d: s.newUsers7d,
+      },
+      financials: {
+        paidRevenue,
+        pendingRevenue,
+        refunded,
+        netRevenue: paidRevenue - refunded,
+        avgBookingValue,
+      },
+      loadFactor: {
+        capacity: s.capacitySeats,
+        seatsSold: s.seatsSold,
+        percent: s.capacitySeats > 0 ? Math.round((s.seatsSold / s.capacitySeats) * 100) : 0,
       },
       flightStatusCounts: Object.fromEntries(
-        statusGroups.map((g) => [g.status, g._count.status])
+        s.flightStatusGroups.map((g) => [g.status, g._count.status])
       ),
-      upcomingFlights: upcomingFlights.map(toAdminFlight),
-      recentBookings: recentBookings.map((b) => ({
+      bookingStatusCounts: Object.fromEntries(
+        s.bookingStatusGroups.map((g) => [g.status, g._count.status])
+      ),
+      revenueTrend: buildRevenueTrend(s.recentPayments),
+      topRoutes: s.topRoutes.map((r) => ({
+        route: `${r.originCode} → ${r.destCode}`,
+        origin: r.originCity,
+        destination: r.destCity,
+        bookings: Number(r.bookings),
+      })),
+      upcomingFlights: s.upcomingFlights.map(toAdminFlight),
+      recentBookings: s.recentBookings.map((b) => ({
         id: b.id,
         bookingReference: b.bookingReference,
         status: b.status,
@@ -122,6 +167,37 @@ export const adminService = {
     return toAdminFlight(
       await adminRepository.updateFlight(flightId, { status: 'SCHEDULED' })
     );
+  },
+
+  async updateFlightDetails(flightId: string, input: UpdateFlightInput) {
+    const flight = await adminRepository.findFlightById(flightId);
+    if (!flight) throw ApiError.notFound('Flight not found');
+
+    const data: Prisma.FlightUpdateInput = {};
+    if (input.gate !== undefined) data.gate = input.gate || null;
+    if (input.terminal !== undefined) data.terminal = input.terminal || null;
+    if (input.boardingTime !== undefined)
+      data.boardingTime = input.boardingTime ? new Date(input.boardingTime) : null;
+
+    return toAdminFlight(await adminRepository.updateFlight(flightId, data));
+  },
+
+  async setFlightStatus(flightId: string, status: FlightStatusInput) {
+    const flight = await adminRepository.findFlightById(flightId);
+    if (!flight) throw ApiError.notFound('Flight not found');
+    if (flight.status === 'CANCELLED')
+      throw ApiError.conflict('Reinstate the flight before changing its status');
+
+    // Enforce a sensible forward progression through the operational lifecycle.
+    const order = ['SCHEDULED', 'BOARDING', 'DEPARTED', 'IN_AIR', 'ARRIVED'];
+    const from = order.indexOf(flight.status);
+    const to = order.indexOf(status);
+    if (from !== -1 && to !== -1 && to < from)
+      throw ApiError.conflict(
+        `Cannot move a ${flight.status.toLowerCase()} flight back to ${status.toLowerCase()}`
+      );
+
+    return toAdminFlight(await adminRepository.updateFlight(flightId, { status }));
   },
 
   async listUsers(query: { page?: string; pageSize?: string }) {

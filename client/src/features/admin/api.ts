@@ -19,6 +19,8 @@ export interface AdminFlight {
   bookingsCount: number;
 }
 
+export type FlightOpStatus = 'SCHEDULED' | 'BOARDING' | 'DEPARTED' | 'IN_AIR' | 'ARRIVED';
+
 export interface AdminUser {
   id: string;
   firstName: string;
@@ -36,10 +38,31 @@ export interface AdminStats {
     users: number;
     flights: number;
     bookings: number;
-    revenue: string | number;
+    revenue: number;
     flightsToday: number;
+    newUsers7d: number;
+  };
+  financials: {
+    paidRevenue: number;
+    pendingRevenue: number;
+    refunded: number;
+    netRevenue: number;
+    avgBookingValue: number;
+  };
+  loadFactor: {
+    capacity: number;
+    seatsSold: number;
+    percent: number;
   };
   flightStatusCounts: Record<string, number>;
+  bookingStatusCounts: Record<string, number>;
+  revenueTrend: Array<{ date: string; revenue: number }>;
+  topRoutes: Array<{
+    route: string;
+    origin: string;
+    destination: string;
+    bookings: number;
+  }>;
   upcomingFlights: AdminFlight[];
   recentBookings: Array<{
     id: string;
@@ -85,6 +108,25 @@ export const adminApi = {
   async reinstateFlight(id: string) {
     const { data } = await api.post<ApiResponse<{ flight: AdminFlight }>>(
       `/admin/flights/${id}/reinstate`
+    );
+    return data.data.flight;
+  },
+
+  async updateFlight(
+    id: string,
+    input: { gate?: string; terminal?: string; boardingTime?: string | null }
+  ) {
+    const { data } = await api.patch<ApiResponse<{ flight: AdminFlight }>>(
+      `/admin/flights/${id}`,
+      input
+    );
+    return data.data.flight;
+  },
+
+  async setFlightStatus(id: string, status: FlightOpStatus) {
+    const { data } = await api.post<ApiResponse<{ flight: AdminFlight }>>(
+      `/admin/flights/${id}/status`,
+      { status }
     );
     return data.data.flight;
   },

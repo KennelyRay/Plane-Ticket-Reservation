@@ -1,7 +1,12 @@
 import { Request, Response } from 'express';
 import { asyncHandler } from '../utils/asyncHandler';
 import { adminService } from '../services/admin.service';
-import { delayFlightSchema, updateUserSchema } from '../validators/admin.validator';
+import {
+  delayFlightSchema,
+  flightStatusSchema,
+  updateFlightSchema,
+  updateUserSchema,
+} from '../validators/admin.validator';
 
 export const adminController = {
   stats: asyncHandler(async (_req: Request, res: Response) => {
@@ -27,6 +32,18 @@ export const adminController = {
 
   reinstateFlight: asyncHandler(async (req: Request, res: Response) => {
     const flight = await adminService.reinstateFlight(String(req.params.id));
+    res.json({ success: true, data: { flight } });
+  }),
+
+  updateFlight: asyncHandler(async (req: Request, res: Response) => {
+    const input = updateFlightSchema.parse(req.body);
+    const flight = await adminService.updateFlightDetails(String(req.params.id), input);
+    res.json({ success: true, data: { flight } });
+  }),
+
+  setFlightStatus: asyncHandler(async (req: Request, res: Response) => {
+    const { status } = flightStatusSchema.parse(req.body);
+    const flight = await adminService.setFlightStatus(String(req.params.id), status);
     res.json({ success: true, data: { flight } });
   }),
 
