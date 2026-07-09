@@ -108,6 +108,13 @@ export const bookingApi = {
     return data.data;
   },
 
+  async emailBoardingPass(bookingId: string) {
+    const { data } = await api.post<ApiResponse<{ email: string }>>(
+      `/checkin/${bookingId}/email`
+    );
+    return data.data;
+  },
+
   async pay(payload: {
     bookingId: string;
     method: PaymentMethod;

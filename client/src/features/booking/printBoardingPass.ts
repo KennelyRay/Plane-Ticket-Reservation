@@ -18,34 +18,11 @@ const barcode = (data: string) =>
     })
     .join('');
 
-/**
- * Opens a print-ready boarding pass in a new window and triggers the print dialog.
- * Self-contained (inline styles) so it prints identically regardless of app CSS.
- */
-export function printBoardingPass(booking: Booking, bp: BookingPassenger) {
-  const ticket = bp.ticket;
-  const pass = ticket?.boardingPass;
-  if (!ticket || !pass) return;
-
-  const { flight } = booking;
-  const win = window.open('', '_blank', 'width=760,height=560');
-  if (!win) return;
-
-  const cell = (label: string, value: string) => `
-    <div>
-      <div style="font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#46546b;">${esc(label)}</div>
-      <div style="font-size:15px;font-weight:800;color:#0b1526;">${esc(value)}</div>
-    </div>`;
-
-  win.document.write(`<!doctype html>
-<html>
-<head>
-<meta charset="utf-8" />
-<title>Boarding pass · ${esc(booking.bookingReference)}</title>
-<style>
+const STYLES = `
   * { box-sizing: border-box; }
   body { margin: 0; padding: 32px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #0b1526; background: #f6f8fc; }
-  .pass { max-width: 640px; margin: 0 auto; background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; overflow: hidden; }
+  .pass { max-width: 640px; margin: 0 auto 20px; background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; overflow: hidden; }
+  .pass:last-child { margin-bottom: 0; }
   .head { background: linear-gradient(90deg, #2563eb, #7c3aed); color: #fff; padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; }
   .head .t { font-size: 12px; font-weight: 800; letter-spacing: .18em; text-transform: uppercase; }
   .head .r { font-size: 12px; font-weight: 700; }
@@ -60,10 +37,22 @@ export function printBoardingPass(booking: Booking, bp: BookingPassenger) {
   .grid { margin-top: 16px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
   .stub { width: 180px; border-left: 1px dashed #cbd5e1; padding-left: 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; }
   .tkt { font-size: 10px; font-weight: 700; letter-spacing: .08em; color: #46546b; }
-  @media print { body { padding: 0; background: #fff; } .pass { border: none; } }
-</style>
-</head>
-<body>
+  @media print { body { padding: 0; background: #fff; } .pass { border: none; page-break-after: always; } .pass:last-child { page-break-after: auto; } }
+`;
+
+const cell = (label: string, value: string) => `
+  <div>
+    <div style="font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#46546b;">${esc(label)}</div>
+    <div style="font-size:15px;font-weight:800;color:#0b1526;">${esc(value)}</div>
+  </div>`;
+
+/** One boarding-pass card as standalone HTML (used for both print and email). */
+function passCardHtml(booking: Booking, bp: BookingPassenger): string {
+  const ticket = bp.ticket;
+  const pass = ticket?.boardingPass;
+  if (!ticket || !pass) return '';
+  const { flight } = booking;
+  return `
   <div class="pass">
     <div class="head">
       <span class="t"><svg width="13" height="13" viewBox="0 0 24 24" fill="#fff" style="vertical-align:-1px;margin-right:6px;transform:rotate(-45deg)"><path d="M3.478 2.404a.75.75 0 0 0-.926.941l2.432 7.905H13.5a.75.75 0 0 1 0 1.5H4.984l-2.432 7.905a.75.75 0 0 0 .926.94 60.519 60.519 0 0 0 18.445-8.986.75.75 0 0 0 0-1.218A60.517 60.517 0 0 0 3.478 2.404Z"/></svg>Boarding pass</span>
@@ -96,11 +85,39 @@ export function printBoardingPass(booking: Booking, bp: BookingPassenger) {
         <div class="tkt">${esc(ticket.ticketNumber)}</div>
       </div>
     </div>
-  </div>
-  <script>
-    window.onload = function () { window.focus(); window.print(); };
-  </script>
+  </div>`;
+}
+
+/** Opens a print-ready window with the given passes and triggers the print dialog. */
+function openPrintWindow(booking: Booking, cards: string[]) {
+  if (cards.length === 0) return;
+  const win = window.open('', '_blank', 'width=760,height=640');
+  if (!win) return;
+  win.document.write(`<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<title>Boarding pass · ${esc(booking.bookingReference)}</title>
+<style>${STYLES}</style>
+</head>
+<body>
+  ${cards.join('\n')}
+  <script>window.onload = function () { window.focus(); window.print(); };</script>
 </body>
 </html>`);
   win.document.close();
+}
+
+/** Print a single passenger's boarding pass. */
+export function printBoardingPass(booking: Booking, bp: BookingPassenger) {
+  openPrintWindow(booking, [passCardHtml(booking, bp)].filter(Boolean));
+}
+
+/** Print every issued boarding pass in the booking (one per page). */
+export function printBoardingPasses(booking: Booking) {
+  const cards = booking.passengers
+    .filter((bp) => bp.ticket?.boardingPass)
+    .map((bp) => passCardHtml(booking, bp))
+    .filter(Boolean);
+  openPrintWindow(booking, cards);
 }

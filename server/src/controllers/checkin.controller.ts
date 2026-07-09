@@ -7,4 +7,9 @@ export const checkinController = {
     const booking = await checkinService.checkIn(String(req.params.bookingId), req.user!);
     res.json({ success: true, data: booking });
   }),
+
+  emailBoardingPass: asyncHandler(async (req: Request, res: Response) => {
+    const result = await checkinService.emailBoardingPass(String(req.params.bookingId), req.user!);
+    res.json({ success: true, data: result });
+  }),
 };

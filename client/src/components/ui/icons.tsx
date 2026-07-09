@@ -161,6 +161,22 @@ export const WalletIcon = ({ className = 'w-5 h-5' }: IconProps) => (
   </svg>
 );
 
+export const PrinterIcon = ({ className = 'w-5 h-5' }: IconProps) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden>
+    <path d="M6 9V4h12v5" />
+    <path d="M6 18H5a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-1" />
+    <rect x="6" y="14" width="12" height="7" rx="1" />
+    <path d="M17 12h.01" />
+  </svg>
+);
+
+export const MailIcon = ({ className = 'w-5 h-5' }: IconProps) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden>
+    <rect x="3" y="5" width="18" height="14" rx="2.5" />
+    <path d="m3.5 7 7.2 5.2a2 2 0 0 0 2.6 0L20.5 7" />
+  </svg>
+);
+
 /**
  * VertixFlights brand mark: a "V" chevron cut by a rising contrail
  * with a plane at its tip, on a brand-gradient tile.

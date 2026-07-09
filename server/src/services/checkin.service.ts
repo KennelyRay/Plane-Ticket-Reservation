@@ -84,4 +84,33 @@ export const checkinService = {
 
     return (await bookingRepository.findById(bookingId))!;
   },
+
+  /**
+   * "Emails" the e-boarding pass to the booking's contact address. No SMTP is
+   * wired up in this demo, so we record a notification to represent the send and
+   * return the address the pass went to.
+   */
+  async emailBoardingPass(bookingId: string, user: AuthUser) {
+    const booking = await bookingRepository.findById(bookingId);
+    if (!booking || (booking.userId !== user.id && user.role !== 'ADMIN'))
+      throw ApiError.notFound('Booking not found');
+
+    const issued =
+      booking.passengers.length > 0 &&
+      booking.passengers.every((bp) => bp.ticket?.status === 'CHECKED_IN' && !!bp.ticket?.boardingPass);
+    if (!issued)
+      throw ApiError.badRequest('Check in first — your boarding pass has not been issued yet');
+
+    const route = `${booking.flight.route.originAirport.iataCode} → ${booking.flight.route.destinationAirport.iataCode}`;
+    await prisma.notification.create({
+      data: {
+        userId: booking.userId,
+        type: 'BOARDING_REMINDER',
+        title: 'Your e-boarding pass',
+        message: `Your e-boarding pass for ${route} (${booking.flight.flightNumber}) has been sent to ${booking.contactEmail}.`,
+      },
+    });
+
+    return { email: booking.contactEmail };
+  },
 };
