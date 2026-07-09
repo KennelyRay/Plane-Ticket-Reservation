@@ -18,6 +18,10 @@ export const flightStatusSchema = z.object({
   status: z.enum(['SCHEDULED', 'BOARDING', 'DEPARTED', 'IN_AIR', 'ARRIVED']),
 });
 
+export const rescheduleBookingSchema = z.object({
+  flightId: z.string().min(1, 'Select a flight to reschedule to'),
+});
+
 export const updateUserSchema = z
   .object({
     status: z.enum(['ACTIVE', 'INACTIVE', 'SUSPENDED']).optional(),
@@ -41,4 +45,5 @@ export const updateUserSchema = z
 export type DelayFlightInput = z.infer<typeof delayFlightSchema>;
 export type UpdateFlightInput = z.infer<typeof updateFlightSchema>;
 export type FlightStatusInput = z.infer<typeof flightStatusSchema>['status'];
+export type RescheduleBookingInput = z.infer<typeof rescheduleBookingSchema>;
 export type UpdateUserInput = z.infer<typeof updateUserSchema>;

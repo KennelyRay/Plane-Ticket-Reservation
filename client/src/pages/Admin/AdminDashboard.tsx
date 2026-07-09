@@ -11,6 +11,9 @@ import {
 import { useAuthStore } from '../../features/auth/store';
 import type { Booking, BookingPassenger } from '../../features/booking/api';
 import { printBoardingPass } from '../../features/booking/printBoardingPass';
+import { flightApi } from '../../features/flight/api';
+import type { Flight } from '../../types';
+import BoardingPassCard from '../../components/booking/BoardingPassCard';
 import { CheckInIcon, PlaneIcon, TicketIcon, XIcon } from '../../components/ui/icons';
 
 type Tab = 'overview' | 'flights' | 'users';
@@ -634,22 +637,181 @@ function FlightsTab({ onError }: { onError: (msg: string) => void }) {
   );
 }
 
-/** Per-booking panel inside the user drawer: passengers, manual check-in, print passes. */
-function AdminBookingCard({
+/** Full-screen overlay that previews a passenger's boarding pass on screen. */
+function BoardingPassPreview({
   booking,
-  onCheckIn,
-  checkingIn,
+  bp,
+  onClose,
 }: {
   booking: Booking;
-  onCheckIn: (id: string) => void;
-  checkingIn: boolean;
+  bp: BookingPassenger;
+  onClose: () => void;
 }) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-ink/50 backdrop-blur-sm p-4 animate-fade-in"
+      onClick={onClose}
+    >
+      <div className="w-full max-w-lg" onClick={(e) => e.stopPropagation()}>
+        <BoardingPassCard booking={booking} bp={bp} />
+        <div className="flex justify-center gap-2 mt-4">
+          <button
+            onClick={() => printBoardingPass(booking, bp)}
+            className="h-10 px-5 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-brand-600 to-violet-glow shadow-soft hover:shadow-lift transition-all"
+          >
+            Print
+          </button>
+          <button
+            onClick={onClose}
+            className="h-10 px-5 rounded-xl text-sm font-bold text-white/90 border border-white/40 hover:bg-white/10 transition-colors"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** Inline flight picker for rescheduling a booking to another flight on the same route. */
+function ReschedulePanel({
+  booking,
+  onMove,
+  moving,
+}: {
+  booking: Booking;
+  onMove: (flightId: string) => void;
+  moving: boolean;
+}) {
+  const origin = booking.flight.route.originAirport.iataCode;
+  const destination = booking.flight.route.destinationAirport.iataCode;
+  const [date, setDate] = useState(() =>
+    new Date(booking.flight.departureTime).toLocaleDateString('en-CA')
+  );
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['admin', 'reschedule-search', origin, destination, date],
+    queryFn: () => flightApi.search({ origin, destination, date, sort: 'departure' }),
+  });
+
+  const options = (data?.flights ?? []).filter(
+    (f: Flight) => f.id !== booking.flight.id && new Date(f.departureTime) > new Date()
+  );
+
+  return (
+    <div className="mt-3 rounded-xl border border-brand-200 bg-brand-50/50 p-3.5">
+      <div className="flex items-center justify-between gap-3 mb-3">
+        <p className="text-[11px] font-bold uppercase tracking-wide text-ink-soft">
+          Reschedule · {origin} → {destination}
+        </p>
+        <input
+          type="date"
+          value={date}
+          onChange={(e) => setDate(e.target.value)}
+          className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-brand-500/60"
+        />
+      </div>
+
+      {isLoading ? (
+        <div className="h-20 animate-pulse bg-white/60 rounded-lg" />
+      ) : options.length === 0 ? (
+        <p className="text-xs font-medium text-ink-soft py-2">
+          No other flights on this route for {new Date(`${date}T00:00:00`).toLocaleDateString([], {
+            month: 'short',
+            day: 'numeric',
+          })}
+          . Try another date.
+        </p>
+      ) : (
+        <ul className="space-y-1.5 max-h-56 overflow-y-auto">
+          {options.map((f: Flight) => (
+            <li
+              key={f.id}
+              className="flex items-center gap-3 bg-white rounded-lg border border-slate-200/80 px-3 py-2"
+            >
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-bold text-ink">
+                  {new Date(f.departureTime).toLocaleTimeString([], {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}
+                  {' – '}
+                  {new Date(f.arrivalTime).toLocaleTimeString([], {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}
+                  <span className="ml-2 text-xs font-semibold text-ink-soft">{f.flightNumber}</span>
+                </p>
+                <p className="text-[11px] font-medium text-ink-soft">
+                  {f.airline.name} · from ₱{Number(f.economyPrice).toLocaleString()}
+                </p>
+              </div>
+              <button
+                onClick={() => onMove(f.id)}
+                disabled={moving}
+                className={`${actionBtn} border-brand-200 bg-brand-50 text-brand-700 hover:bg-brand-100`}
+              >
+                {moving ? 'Moving…' : 'Move here'}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+/** Per-booking panel inside the user drawer: passengers, passes, check-in, cancel, reschedule. */
+function AdminBookingCard({
+  booking,
+  userId,
+  onError,
+}: {
+  booking: Booking;
+  userId: string;
+  onError: (msg: string) => void;
+}) {
+  const queryClient = useQueryClient();
+  const [preview, setPreview] = useState<BookingPassenger | null>(null);
+  const [rescheduling, setRescheduling] = useState(false);
+
   const { flight } = booking;
   const departed = new Date(flight.departureTime) <= new Date();
+  const active = booking.status === 'CONFIRMED' || booking.status === 'PENDING';
   const allCheckedIn =
     booking.passengers.length > 0 &&
     booking.passengers.every((p) => p.ticket?.status === 'CHECKED_IN');
   const canCheckIn = booking.status === 'CONFIRMED' && !departed && !allCheckedIn;
+
+  const refresh = () => {
+    queryClient.invalidateQueries({ queryKey: ['admin', 'user-bookings', userId] });
+    queryClient.invalidateQueries({ queryKey: ['admin', 'stats'] });
+  };
+  const fail = (err: unknown, fallback: string) =>
+    onError(isAxiosError(err) ? err.response?.data?.message ?? fallback : fallback);
+
+  const checkIn = useMutation({
+    mutationFn: () => adminApi.checkInBooking(booking.id),
+    onSuccess: refresh,
+    onError: (err) => fail(err, 'Check-in failed'),
+  });
+
+  const cancel = useMutation({
+    mutationFn: () => adminApi.cancelBooking(booking.id),
+    onSuccess: refresh,
+    onError: (err) => fail(err, 'Could not cancel the booking'),
+  });
+
+  const reschedule = useMutation({
+    mutationFn: (flightId: string) => adminApi.rescheduleBooking(booking.id, flightId),
+    onSuccess: () => {
+      setRescheduling(false);
+      refresh();
+    },
+    onError: (err) => fail(err, 'Could not reschedule the booking'),
+  });
+
+  const busy = checkIn.isPending || cancel.isPending || reschedule.isPending;
 
   return (
     <div className="rounded-xl border border-slate-200/80 p-4">
@@ -694,35 +856,80 @@ function AdminBookingCard({
                 </span>
               )}
               {hasPass && (
-                <button
-                  onClick={() => printBoardingPass(booking, bp)}
-                  className={`${actionBtn} border-brand-200 bg-brand-50 text-brand-700 hover:bg-brand-100`}
-                >
-                  Print pass
-                </button>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={() => setPreview(bp)}
+                    className={`${actionBtn} border-slate-200 bg-white text-ink-soft hover:bg-slate-50`}
+                  >
+                    Preview
+                  </button>
+                  <button
+                    onClick={() => printBoardingPass(booking, bp)}
+                    className={`${actionBtn} border-brand-200 bg-brand-50 text-brand-700 hover:bg-brand-100`}
+                  >
+                    Print
+                  </button>
+                </div>
               )}
             </li>
           );
         })}
       </ul>
 
-      <div className="flex items-center justify-between gap-3 mt-3">
+      <div className="flex flex-wrap items-center justify-between gap-3 mt-3">
         <span className="text-xs font-semibold text-ink-soft">
           {booking.passengers.length}{' '}
           {booking.passengers.length === 1 ? 'passenger' : 'passengers'} · {peso(booking.totalAmount)}
         </span>
-        {canCheckIn ? (
-          <button
-            onClick={() => onCheckIn(booking.id)}
-            disabled={checkingIn}
-            className={`${actionBtn} border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100`}
-          >
-            {checkingIn ? 'Checking in…' : 'Manual check-in'}
-          </button>
-        ) : departed && booking.status === 'CONFIRMED' && !allCheckedIn ? (
-          <span className="text-xs font-medium text-ink-soft">Flight departed</span>
-        ) : null}
+        <div className="flex items-center gap-1.5 flex-wrap justify-end">
+          {canCheckIn && (
+            <button
+              onClick={() => checkIn.mutate()}
+              disabled={busy}
+              className={`${actionBtn} border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100`}
+            >
+              {checkIn.isPending ? 'Checking in…' : 'Manual check-in'}
+            </button>
+          )}
+          {active && (
+            <button
+              onClick={() => setRescheduling((v) => !v)}
+              disabled={busy}
+              className={`${actionBtn} border-brand-200 bg-brand-50 text-brand-700 hover:bg-brand-100`}
+            >
+              {rescheduling ? 'Close' : 'Reschedule'}
+            </button>
+          )}
+          {active && !departed && (
+            <button
+              onClick={() => {
+                if (
+                  window.confirm(
+                    `Cancel ${booking.bookingReference}? Seats will be released and this cannot be undone.`
+                  )
+                )
+                  cancel.mutate();
+              }}
+              disabled={busy}
+              className={`${actionBtn} border-red-200 bg-red-50 text-red-700 hover:bg-red-100`}
+            >
+              {cancel.isPending ? 'Cancelling…' : 'Cancel flight'}
+            </button>
+          )}
+        </div>
       </div>
+
+      {rescheduling && (
+        <ReschedulePanel
+          booking={booking}
+          onMove={(flightId) => reschedule.mutate(flightId)}
+          moving={reschedule.isPending}
+        />
+      )}
+
+      {preview && (
+        <BoardingPassPreview booking={booking} bp={preview} onClose={() => setPreview(null)} />
+      )}
     </div>
   );
 }
@@ -736,22 +943,9 @@ function UserBookingsModal({
   onClose: () => void;
   onError: (msg: string) => void;
 }) {
-  const queryClient = useQueryClient();
   const { data, isLoading } = useQuery({
     queryKey: ['admin', 'user-bookings', userId],
     queryFn: () => adminApi.userBookings(userId),
-  });
-
-  const checkIn = useMutation({
-    mutationFn: (bookingId: string) => adminApi.checkInBooking(bookingId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin', 'user-bookings', userId] });
-      queryClient.invalidateQueries({ queryKey: ['admin', 'stats'] });
-    },
-    onError: (err) =>
-      onError(
-        isAxiosError(err) ? err.response?.data?.message ?? 'Check-in failed' : 'Check-in failed'
-      ),
   });
 
   return (
@@ -797,12 +991,7 @@ function UserBookingsModal({
             </div>
           ) : (
             data.bookings.map((b) => (
-              <AdminBookingCard
-                key={b.id}
-                booking={b}
-                onCheckIn={(id) => checkIn.mutate(id)}
-                checkingIn={checkIn.isPending && checkIn.variables === b.id}
-              />
+              <AdminBookingCard key={b.id} booking={b} userId={userId} onError={onError} />
             ))
           )}
         </div>

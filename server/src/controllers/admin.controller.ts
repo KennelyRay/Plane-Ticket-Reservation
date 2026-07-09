@@ -4,6 +4,7 @@ import { adminService } from '../services/admin.service';
 import {
   delayFlightSchema,
   flightStatusSchema,
+  rescheduleBookingSchema,
   updateFlightSchema,
   updateUserSchema,
 } from '../validators/admin.validator';
@@ -59,6 +60,17 @@ export const adminController = {
 
   checkInBooking: asyncHandler(async (req: Request, res: Response) => {
     const booking = await adminService.checkInBooking(String(req.params.id), req.user!);
+    res.json({ success: true, data: booking });
+  }),
+
+  cancelBooking: asyncHandler(async (req: Request, res: Response) => {
+    const booking = await adminService.cancelBooking(String(req.params.id), req.user!);
+    res.json({ success: true, data: booking });
+  }),
+
+  rescheduleBooking: asyncHandler(async (req: Request, res: Response) => {
+    const { flightId } = rescheduleBookingSchema.parse(req.body);
+    const booking = await adminService.rescheduleBooking(String(req.params.id), flightId);
     res.json({ success: true, data: booking });
   }),
 

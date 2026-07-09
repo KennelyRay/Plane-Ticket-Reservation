@@ -170,4 +170,17 @@ export const adminApi = {
     const { data } = await api.post<ApiResponse<Booking>>(`/admin/bookings/${bookingId}/check-in`);
     return data.data;
   },
+
+  async cancelBooking(bookingId: string) {
+    const { data } = await api.post<ApiResponse<Booking>>(`/admin/bookings/${bookingId}/cancel`);
+    return data.data;
+  },
+
+  async rescheduleBooking(bookingId: string, flightId: string) {
+    const { data } = await api.post<ApiResponse<Booking>>(
+      `/admin/bookings/${bookingId}/reschedule`,
+      { flightId }
+    );
+    return data.data;
+  },
 };

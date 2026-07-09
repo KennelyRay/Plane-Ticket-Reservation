@@ -21,5 +21,7 @@ router.get('/users/:id/bookings', adminController.userBookings);
 router.patch('/users/:id', adminController.updateUser);
 
 router.post('/bookings/:id/check-in', adminController.checkInBooking);
+router.post('/bookings/:id/cancel', adminController.cancelBooking);
+router.post('/bookings/:id/reschedule', adminController.rescheduleBooking);
 
 export default router;

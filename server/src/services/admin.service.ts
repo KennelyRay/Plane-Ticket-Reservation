@@ -1,7 +1,12 @@
 import { Prisma } from '@prisma/client';
+import { prisma } from '../config/db';
 import { ApiError } from '../utils/ApiError';
 import { adminRepository } from '../repositories/admin.repository';
 import { bookingRepository } from '../repositories/booking.repository';
+import { flightRepository } from '../repositories/flight.repository';
+import { seatRepository } from '../repositories/seat.repository';
+import { emitSeatBooked, emitSeatReleased } from '../sockets';
+import { bookingService } from './booking.service';
 import { checkinService } from './checkin.service';
 import { AuthUser } from '../middleware/auth';
 import {
@@ -248,6 +253,61 @@ export const adminService = {
   /** Manual (counter) check-in performed by an admin — bypasses the 24h window. */
   async checkInBooking(bookingId: string, actor: AuthUser) {
     return checkinService.checkIn(bookingId, actor, { overrideWindow: true });
+  },
+
+  /** Cancel a booking on the customer's behalf (releases its held seats). */
+  async cancelBooking(bookingId: string, actor: AuthUser) {
+    return bookingService.cancelBooking(bookingId, actor);
+  },
+
+  /**
+   * Move a booking to another flight. Keeps seat assignments when the new flight
+   * uses the same aircraft (and the seat is still free); otherwise the seats are
+   * released for reselection. Any issued boarding passes are voided, since they
+   * reference the old flight's gate and times.
+   */
+  async rescheduleBooking(bookingId: string, newFlightId: string) {
+    const booking = await bookingRepository.findById(bookingId);
+    if (!booking) throw ApiError.notFound('Booking not found');
+    if (booking.status !== 'CONFIRMED' && booking.status !== 'PENDING')
+      throw ApiError.badRequest('Only confirmed or pending bookings can be rescheduled');
+    if (booking.flightId === newFlightId)
+      throw ApiError.badRequest('Choose a different flight to reschedule to');
+
+    const newFlight = await flightRepository.findById(newFlightId);
+    if (!newFlight) throw ApiError.notFound('Selected flight not found');
+    if (newFlight.status === 'CANCELLED')
+      throw ApiError.badRequest('That flight has been cancelled');
+    if (newFlight.departureTime <= new Date())
+      throw ApiError.badRequest('That flight has already departed');
+
+    const sameAircraft = newFlight.aircraftId === booking.flight.aircraftId;
+    const bookedOnNew = sameAircraft
+      ? await seatRepository.findBookedSeatIds(newFlightId)
+      : new Set<string>();
+
+    const seatPlan = booking.passengers.map((bp) => ({
+      id: bp.id,
+      oldSeatId: bp.seatId,
+      newSeatId: sameAircraft && bp.seatId && !bookedOnNew.has(bp.seatId) ? bp.seatId : null,
+    }));
+
+    await prisma.$transaction([
+      // Void issued tickets + boarding passes — they belong to the old flight.
+      prisma.ticket.deleteMany({ where: { bookingPassenger: { bookingId } } }),
+      ...seatPlan.map((s) =>
+        prisma.bookingPassenger.update({ where: { id: s.id }, data: { seatId: s.newSeatId } })
+      ),
+      prisma.booking.update({ where: { id: bookingId }, data: { flightId: newFlightId } }),
+    ]);
+
+    // Notify seat-map viewers on both flights.
+    for (const s of seatPlan) {
+      if (s.oldSeatId) emitSeatReleased(booking.flightId, s.oldSeatId);
+      if (s.newSeatId) emitSeatBooked(newFlightId, s.newSeatId);
+    }
+
+    return (await bookingRepository.findById(bookingId))!;
   },
 
   async updateUser(actorId: string, userId: string, input: UpdateUserInput) {
