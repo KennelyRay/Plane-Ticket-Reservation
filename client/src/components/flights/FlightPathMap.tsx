@@ -68,15 +68,21 @@ const niceScaleKm = (maxKm: number) => {
  * with simplified coastlines, all other airports as context dots, a curved
  * flight path, scale bar and north indicator. Callers must ensure both
  * endpoints have coordinates.
+ *
+ * With `progress` (0–1) the plane sits at that fraction of the arc facing
+ * along it, and the portion already flown is drawn as a solid line — used
+ * for live in-flight tracking.
  */
 export default function FlightPathMap({
   airports,
   origin,
   destination,
+  progress,
 }: {
   airports: Airport[];
   origin: Airport;
   destination: Airport;
+  progress?: number;
 }) {
   const uid = useId();
   const seaId = `${uid}-sea`;
@@ -175,10 +181,21 @@ export default function FlightPathMap({
   const cx = (x1 + x2) / 2 + px * k;
   const cy = (y1 + y2) / 2 + py * k;
 
-  // Bezier midpoint + chord angle for the plane glyph
-  const bx = (x1 + 2 * cx + x2) / 4;
-  const by = (y1 + 2 * cy + y2) / 4;
-  const angle = (Math.atan2(dy, dx) * 180) / Math.PI;
+  // Plane glyph at `progress` along the arc (default: midpoint), rotated to
+  // the curve's tangent — at t=0.5 that equals the chord direction. Clamped
+  // off the exact endpoints so the glyph never swallows a marker.
+  const t = progress == null ? 0.5 : Math.min(Math.max(progress, 0.03), 0.97);
+  const omt = 1 - t;
+  const bx = omt * omt * x1 + 2 * omt * t * cx + t * t * x2;
+  const by = omt * omt * y1 + 2 * omt * t * cy + t * t * y2;
+  const angle =
+    (Math.atan2(omt * (cy - y1) + t * (y2 - cy), omt * (cx - x1) + t * (x2 - cx)) * 180) / Math.PI;
+
+  // De Casteljau split at t: the flown part of the arc, drawn solid
+  const flownPath =
+    progress != null
+      ? `M ${x1} ${y1} Q ${x1 + (cx - x1) * t} ${y1 + (cy - y1) * t} ${bx} ${by}`
+      : null;
 
   const labelY = (yy: number) => (yy < 40 ? yy + 18 : yy - 11);
 
@@ -224,6 +241,9 @@ export default function FlightPathMap({
         ))}
 
         <path d={`M ${x1} ${y1} Q ${cx} ${cy} ${x2} ${y2}`} fill="none" stroke="#2563eb" strokeWidth="2" strokeDasharray="5 5" strokeLinecap="round" />
+        {flownPath && (
+          <path d={flownPath} fill="none" stroke="#2563eb" strokeWidth="2.5" strokeLinecap="round" />
+        )}
 
         {/* origin + destination markers */}
         <circle cx={x1} cy={y1} r="6" fill="#fff" stroke="#2563eb" strokeWidth="2.2" />

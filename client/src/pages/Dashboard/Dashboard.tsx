@@ -1,8 +1,11 @@
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useAuthStore } from '../../features/auth/store';
 import { bookingApi, type Booking } from '../../features/booking/api';
+import { flightApi } from '../../features/flight/api';
 import { statusChip } from '../Booking/BookingDetail';
+import FlightPathMap from '../../components/flights/FlightPathMap';
 import { CheckInIcon, GlobeIcon, PlaneIcon, SearchIcon, TicketIcon } from '../../components/ui/icons';
 
 const today = new Date().toLocaleDateString([], {
@@ -31,6 +34,132 @@ const daysUntil = (iso: string) => {
 const isUpcoming = (b: Booking) =>
   (b.status === 'CONFIRMED' || b.status === 'PENDING') &&
   new Date(b.flight.departureTime) > new Date();
+
+// Paid bookings whose flight is currently in the air
+const isInFlight = (b: Booking, now: number) =>
+  (b.status === 'CONFIRMED' || b.status === 'COMPLETED') &&
+  new Date(b.flight.departureTime).getTime() <= now &&
+  new Date(b.flight.arrivalTime).getTime() > now;
+
+/** Re-renders on an interval so in-flight progress keeps moving. */
+function useNow(intervalMs: number) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), intervalMs);
+    return () => clearInterval(id);
+  }, [intervalMs]);
+  return now;
+}
+
+const formatRemaining = (ms: number) => {
+  const minutes = Math.max(0, Math.round(ms / 60_000));
+  if (minutes < 1) return 'landing now';
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return h > 0 ? `lands in ${h}h ${m}m` : `lands in ${m}m`;
+};
+
+function InFlightCard({ booking, now }: { booking: Booking; now: number }) {
+  const { flight } = booking;
+  const { route } = flight;
+  const departure = new Date(flight.departureTime).getTime();
+  const arrival = new Date(flight.arrivalTime).getTime();
+  const progress = Math.min(Math.max((now - departure) / (arrival - departure), 0), 1);
+
+  const hasPath =
+    route.originAirport.latitude != null && route.destinationAirport.latitude != null;
+
+  // Context dots for the map; only fetched while something is in the air
+  const { data: airports = [] } = useQuery({
+    queryKey: ['airports'],
+    queryFn: flightApi.airports,
+    staleTime: Infinity,
+    enabled: hasPath,
+  });
+
+  return (
+    <Link
+      to={`/bookings/${booking.id}`}
+      className="group block bg-white rounded-3xl border border-slate-200/80 shadow-soft hover:shadow-lift hover:border-brand-200 transition-all overflow-hidden animate-fade-up"
+    >
+      <div className="p-5 sm:p-6 pb-4">
+        <div className="flex flex-wrap items-center gap-3 mb-4">
+          <span className="inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.14em] text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-3 py-1.5">
+            <span className="relative flex w-2 h-2">
+              <span className="absolute inline-flex w-full h-full rounded-full bg-emerald-400 opacity-75 animate-ping" />
+              <span className="relative inline-flex w-2 h-2 rounded-full bg-emerald-500" />
+            </span>
+            Live · in flight
+          </span>
+          <span className="text-xs font-semibold text-ink-soft">
+            {flight.airline.name} · {flight.flightNumber}
+          </span>
+          <span className="ml-auto text-xs font-bold text-brand-700 tabular-nums">
+            {booking.bookingReference}
+          </span>
+        </div>
+
+        <div className="flex items-center gap-4 sm:gap-6">
+          <div className="shrink-0">
+            <p className="text-2xl sm:text-3xl font-extrabold tracking-tight">
+              {route.originAirport.iataCode}
+            </p>
+            <p className="text-xs font-medium text-ink-soft truncate max-w-24">
+              {route.originAirport.city}
+            </p>
+            <p className="text-sm font-bold tabular-nums mt-0.5">
+              {formatTime(flight.departureTime)}
+            </p>
+          </div>
+
+          {/* Progress track */}
+          <div className="flex-1 min-w-0">
+            <div className="relative h-1.5 rounded-full bg-slate-100">
+              <div
+                className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-brand-600 to-violet-glow"
+                style={{ width: `${progress * 100}%` }}
+              />
+              <span
+                className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-7 h-7 rounded-full bg-white border border-brand-200 shadow-soft flex items-center justify-center"
+                style={{ left: `${progress * 100}%` }}
+              >
+                <PlaneIcon className="w-3.5 h-3.5 text-brand-600" />
+              </span>
+            </div>
+            <p className="text-center text-[11px] font-bold text-ink-soft mt-3 tabular-nums">
+              {Math.round(progress * 100)}% · {formatRemaining(arrival - now)}
+            </p>
+          </div>
+
+          <div className="shrink-0 text-right">
+            <p className="text-2xl sm:text-3xl font-extrabold tracking-tight">
+              {route.destinationAirport.iataCode}
+            </p>
+            <p className="text-xs font-medium text-ink-soft truncate max-w-24 ml-auto">
+              {route.destinationAirport.city}
+            </p>
+            <p className="text-sm font-bold tabular-nums mt-0.5">
+              {formatTime(flight.arrivalTime)}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {hasPath && (
+        <div className="px-5 sm:px-6 pb-5 sm:pb-6">
+          <div className="[&_svg]:w-full [&_svg]:h-auto rounded-xl overflow-hidden border border-slate-200/70">
+            <FlightPathMap
+              airports={airports}
+              origin={route.originAirport}
+              destination={route.destinationAirport}
+              progress={progress}
+            />
+          </div>
+        </div>
+      )}
+    </Link>
+  );
+}
 
 function NextTripCard({ booking }: { booking: Booking }) {
   const { flight } = booking;
@@ -114,6 +243,17 @@ export default function Dashboard() {
 
   const { data: bookings } = useQuery({ queryKey: ['bookings'], queryFn: bookingApi.listMine });
 
+  // Tick every 30s so live flight progress advances without a refresh
+  const now = useNow(30_000);
+  const inFlight = (bookings ?? [])
+    .filter((b) => isInFlight(b, now))
+    // one card per flight even if the user holds several bookings on it
+    .filter((b, i, all) => all.findIndex((o) => o.flight.id === b.flight.id) === i)
+    .sort(
+      (a, b) =>
+        new Date(a.flight.arrivalTime).getTime() - new Date(b.flight.arrivalTime).getTime()
+    );
+
   const upcoming = (bookings ?? [])
     .filter(isUpcoming)
     .sort(
@@ -177,9 +317,13 @@ export default function Dashboard() {
         </p>
       </div>
 
+      {inFlight.map((b) => (
+        <InFlightCard key={b.id} booking={b} now={now} />
+      ))}
+
       {nextTrip ? (
         <NextTripCard booking={nextTrip} />
-      ) : (
+      ) : inFlight.length > 0 ? null : (
         <Link
           to="/flights"
           className="group block rounded-3xl border-2 border-dashed border-slate-200 bg-white/60 p-8 text-center hover:border-brand-300 hover:bg-brand-50/40 transition-colors"

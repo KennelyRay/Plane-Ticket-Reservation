@@ -373,10 +373,11 @@ export default function FlightSearch() {
   const [searchParams, setSearchParams] = useSearchParams();
 
   // The URL is the source of truth for the executed search (deep-linkable);
-  // the form is a draft initialized from it.
+  // the form is a draft initialized from it. With no params the search is
+  // unfiltered — every upcoming flight is listed.
   const executed = {
-    origin: searchParams.get('origin') ?? 'MNL',
-    destination: searchParams.get('destination') ?? 'CEB',
+    origin: searchParams.get('origin') ?? '',
+    destination: searchParams.get('destination') ?? '',
     date: searchParams.get('date') ?? '',
     returnDate: searchParams.get('return') ?? '',
     trip: (searchParams.get('trip') === 'round' ? 'round' : 'one') as TripType,
