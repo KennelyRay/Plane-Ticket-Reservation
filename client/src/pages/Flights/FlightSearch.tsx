@@ -7,6 +7,7 @@ import { RETURN_LEG_KEY, type ReturnLeg } from '../../features/booking/returnLeg
 import type { Airport, Flight } from '../../types';
 import AirportSelect from '../../components/ui/AirportSelect';
 import FlightPathMap from '../../components/flights/FlightPathMap';
+import DestinationImage from '../../components/flights/DestinationImage';
 import { AlertIcon, ClockIcon, MapIcon, PlaneIcon, SearchIcon, ShieldIcon, SparkIcon, SwapIcon, TicketIcon, XIcon } from '../../components/ui/icons';
 
 const formatTime = (iso: string) =>
@@ -209,6 +210,12 @@ function FlightCard({
       )}
 
       <div className="flex flex-col lg:flex-row lg:items-stretch">
+        {/* Destination photo: top banner on mobile, left column on desktop */}
+        <DestinationImage
+          airport={route.destinationAirport}
+          className="h-28 lg:h-auto lg:w-40 shrink-0 rounded-t-2xl lg:rounded-t-none lg:rounded-l-2xl"
+        />
+
         {/* Journey panel */}
         <div className="flex-1 min-w-0 p-5 sm:p-6">
           <div className="flex items-center gap-3 mb-5">
