@@ -1,20 +1,25 @@
-import { useState } from 'react';
+import { useState, type ComponentType } from 'react';
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { isAxiosError } from 'axios';
 import { bookingApi, type PaymentMethod } from '../../features/booking/api';
 import LockCountdown from '../../components/booking/LockCountdown';
-import { ShieldIcon } from '../../components/ui/icons';
+import { CardIcon, ShieldIcon, TicketIcon, WalletIcon } from '../../components/ui/icons';
 
 const inputClass =
   'w-full h-11 px-3.5 rounded-xl border border-slate-200 bg-white text-sm font-medium text-ink placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-brand-500/60 focus:border-brand-400 transition-shadow';
 
 const labelClass = 'block text-[11px] font-bold uppercase tracking-wide text-ink-soft mb-1.5';
 
-const METHODS: { id: PaymentMethod; label: string; hint: string; badge: string }[] = [
-  { id: 'CARD', label: 'Card', hint: 'Visa · Mastercard · JCB', badge: '💳' },
-  { id: 'GCASH', label: 'GCash', hint: 'Pay with your GCash wallet', badge: '📱' },
-  { id: 'PAYMAYA', label: 'Maya', hint: 'Pay with your Maya wallet', badge: '📲' },
+const METHODS: {
+  id: PaymentMethod;
+  label: string;
+  hint: string;
+  Icon: ComponentType<{ className?: string }>;
+}[] = [
+  { id: 'CARD', label: 'Card', hint: 'Visa · Mastercard · JCB', Icon: CardIcon },
+  { id: 'GCASH', label: 'GCash', hint: 'Pay with your GCash wallet', Icon: WalletIcon },
+  { id: 'PAYMAYA', label: 'Maya', hint: 'Pay with your Maya wallet', Icon: WalletIcon },
 ];
 
 const formatCardNumber = (v: string) =>
@@ -51,7 +56,9 @@ export default function Payment() {
   if (!booking)
     return (
       <div className="bg-white rounded-2xl border border-red-100 p-12 text-center">
-        <p className="text-3xl mb-2">🎫</p>
+        <div className="mx-auto mb-3 w-14 h-14 rounded-2xl bg-slate-100 text-ink-soft flex items-center justify-center">
+          <TicketIcon className="w-7 h-7" />
+        </div>
         <p className="font-bold">Booking not found</p>
         <Link to="/bookings" className="text-sm font-bold text-brand-600 hover:underline mt-2 inline-block">
           ← Back to my bookings
@@ -146,7 +153,7 @@ export default function Payment() {
                     : 'border-slate-200 hover:border-brand-200'
                 }`}
               >
-                <span className="text-lg">{m.badge}</span>
+                <m.Icon className={`w-5 h-5 ${method === m.id ? 'text-brand-600' : 'text-ink-soft'}`} />
                 <p className="text-sm font-bold text-ink mt-1">{m.label}</p>
                 <p className="text-[10px] font-medium text-ink-soft leading-tight">{m.hint}</p>
               </button>
@@ -204,7 +211,9 @@ export default function Payment() {
             </div>
           ) : (
             <div className="rounded-xl border border-dashed border-slate-200 p-5 text-center">
-              <p className="text-2xl mb-1">{METHODS.find((m) => m.id === method)?.badge}</p>
+              <span className="mx-auto mb-2 w-12 h-12 rounded-xl bg-brand-50 text-brand-600 flex items-center justify-center">
+                <WalletIcon className="w-6 h-6" />
+              </span>
               <p className="text-sm font-semibold text-ink">
                 You'll approve the payment in your {method === 'GCASH' ? 'GCash' : 'Maya'} app.
               </p>

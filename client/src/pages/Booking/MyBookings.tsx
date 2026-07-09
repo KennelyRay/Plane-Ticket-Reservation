@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { bookingApi } from '../../features/booking/api';
 import { statusChip } from './BookingDetail';
-import { PlaneIcon } from '../../components/ui/icons';
+import { AlertIcon, LuggageIcon, PlaneIcon } from '../../components/ui/icons';
 
 const formatTime = (iso: string) =>
   new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -26,7 +26,9 @@ export default function MyBookings() {
   if (isError || !bookings)
     return (
       <div className="bg-white rounded-2xl border border-red-100 p-12 text-center">
-        <p className="text-3xl mb-2">🛰️</p>
+        <div className="mx-auto mb-3 w-14 h-14 rounded-2xl bg-red-50 text-red-500 flex items-center justify-center">
+          <AlertIcon className="w-7 h-7" />
+        </div>
         <p className="font-bold">Could not load your bookings</p>
         <p className="text-sm text-ink-soft mt-1">Please try again in a moment.</p>
       </div>
@@ -41,7 +43,9 @@ export default function MyBookings() {
 
       {bookings.length === 0 ? (
         <div className="bg-white rounded-2xl border border-dashed border-slate-200 p-12 text-center">
-          <p className="text-4xl mb-3">🧳</p>
+          <div className="mx-auto mb-4 w-16 h-16 rounded-2xl bg-brand-50 text-brand-600 flex items-center justify-center">
+            <LuggageIcon className="w-8 h-8" />
+          </div>
           <p className="text-lg font-bold text-ink">No trips yet</p>
           <p className="text-sm text-ink-soft mt-1 mb-6">
             Book your first flight and it will show up here.

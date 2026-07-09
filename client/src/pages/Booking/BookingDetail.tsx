@@ -7,7 +7,7 @@ import { readReturnLeg, clearReturnLeg } from '../../features/booking/returnLeg'
 import LockCountdown from '../../components/booking/LockCountdown';
 import BoardingPassCard from '../../components/booking/BoardingPassCard';
 import SuccessModal from '../../components/ui/SuccessModal';
-import { CheckInIcon, PlaneIcon, TicketIcon } from '../../components/ui/icons';
+import { CheckIcon, CheckInIcon, PlaneIcon, TicketIcon } from '../../components/ui/icons';
 
 const CHECKIN_OPENS_HOURS_BEFORE = 24;
 
@@ -80,7 +80,9 @@ export default function BookingDetail() {
   if (isError || !booking)
     return (
       <div className="bg-white rounded-2xl border border-red-100 p-12 text-center">
-        <p className="text-3xl mb-2">🎫</p>
+        <div className="mx-auto mb-3 w-14 h-14 rounded-2xl bg-slate-100 text-ink-soft flex items-center justify-center">
+          <TicketIcon className="w-7 h-7" />
+        </div>
         <p className="font-bold">Booking not found</p>
         <Link to="/bookings" className="text-sm font-bold text-brand-600 hover:underline mt-2 inline-block">
           ← Back to my bookings
@@ -153,17 +155,23 @@ export default function BookingDetail() {
       </Link>
 
       {justPaid && booking.status === 'CONFIRMED' && (
-        <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm font-semibold animate-fade-in">
-          🎉 Payment successful — booking confirmed! Your reference is{' '}
-          <span className="font-extrabold">{booking.bookingReference}</span> — keep it handy for
-          check-in.
+        <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm font-semibold animate-fade-in flex items-start gap-2.5">
+          <span className="w-5 h-5 shrink-0 rounded-full bg-emerald-500 text-white flex items-center justify-center mt-0.5">
+            <CheckIcon className="w-3 h-3" />
+          </span>
+          <span>
+            Payment successful — booking confirmed! Your reference is{' '}
+            <span className="font-extrabold">{booking.bookingReference}</span> — keep it handy for
+            check-in.
+          </span>
         </div>
       )}
 
       {offerReturn && returnLeg && (
         <div className="p-4 rounded-2xl bg-brand-50 border border-brand-100 text-brand-800 text-sm font-semibold animate-fade-in flex flex-wrap items-center gap-3">
+          <PlaneIcon className="w-4 h-4 -rotate-45 text-brand-600 shrink-0" />
           <span className="flex-1 min-w-0">
-            ✈️ Outbound booked! Now grab your return flight — {returnLeg.origin} →{' '}
+            Outbound booked! Now grab your return flight — {returnLeg.origin} →{' '}
             {returnLeg.destination} on{' '}
             {new Date(returnLeg.date).toLocaleDateString([], {
               weekday: 'short',

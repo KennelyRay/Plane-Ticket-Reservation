@@ -106,6 +106,61 @@ export const MapIcon = ({ className = 'w-5 h-5' }: IconProps) => (
   </svg>
 );
 
+export const CheckIcon = ({ className = 'w-5 h-5' }: IconProps) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden>
+    <path d="M20 6 9 17l-5-5" />
+  </svg>
+);
+
+export const AlertIcon = ({ className = 'w-5 h-5' }: IconProps) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden>
+    <path d="M12 3.2 2.6 19.5a1 1 0 0 0 .87 1.5h17.06a1 1 0 0 0 .87-1.5L12 3.2Z" />
+    <path d="M12 9.5v5" />
+    <path d="M12 17.8h.01" />
+  </svg>
+);
+
+export const GlobeIcon = ({ className = 'w-5 h-5' }: IconProps) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden>
+    <circle cx="12" cy="12" r="9" />
+    <path d="M3 12h18" />
+    <path d="M12 3c2.6 2.7 3.9 6.1 3.9 9S14.6 18.3 12 21c-2.6-2.7-3.9-6.1-3.9-9S9.4 5.7 12 3Z" />
+  </svg>
+);
+
+export const LuggageIcon = ({ className = 'w-5 h-5' }: IconProps) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden>
+    <rect x="5" y="7" width="14" height="13" rx="2.5" />
+    <path d="M9 7V5.2A1.2 1.2 0 0 1 10.2 4h3.6A1.2 1.2 0 0 1 15 5.2V7" />
+    <path d="M9.5 11v5M14.5 11v5" />
+  </svg>
+);
+
+export const SeatIcon = ({ className = 'w-5 h-5' }: IconProps) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden>
+    <path d="M6 4v7a3 3 0 0 0 3 3h6" />
+    <path d="M18 20v-3a3 3 0 0 0-3-3H9" />
+    <path d="M6 20v-3" />
+  </svg>
+);
+
+export const CardIcon = ({ className = 'w-5 h-5' }: IconProps) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden>
+    <rect x="2.5" y="5" width="19" height="14" rx="2.5" />
+    <path d="M2.5 9.5h19" />
+    <path d="M6 15h4" />
+  </svg>
+);
+
+export const WalletIcon = ({ className = 'w-5 h-5' }: IconProps) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden>
+    <path d="M3 7.5A2.5 2.5 0 0 1 5.5 5H17a1 1 0 0 1 1 1v2" />
+    <rect x="3" y="6.5" width="18" height="13" rx="2.5" />
+    <path d="M21 10.5h-3.5a2.5 2.5 0 0 0 0 5H21" />
+    <path d="M16.6 13h.01" />
+  </svg>
+);
+
 /**
  * VertixFlights brand mark: a "V" chevron cut by a rising contrail
  * with a plane at its tip, on a brand-gradient tile.

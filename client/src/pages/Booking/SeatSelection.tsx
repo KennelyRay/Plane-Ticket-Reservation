@@ -6,7 +6,7 @@ import { seatApi, type SeatMapSeat } from '../../features/seat/api';
 import { useSeatSocket } from '../../hooks/useSeatSocket';
 import SeatMap from '../../components/seatmap/SeatMap';
 import LockCountdown from '../../components/booking/LockCountdown';
-import { PlaneIcon } from '../../components/ui/icons';
+import { AlertIcon, PlaneIcon, SeatIcon } from '../../components/ui/icons';
 
 const formatTime = (iso: string) =>
   new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -78,7 +78,9 @@ export default function SeatSelection() {
   if (isError || !data)
     return (
       <div className="bg-white rounded-2xl border border-red-100 p-12 text-center">
-        <p className="text-3xl mb-2">🛰️</p>
+        <div className="mx-auto mb-3 w-14 h-14 rounded-2xl bg-red-50 text-red-500 flex items-center justify-center">
+          <AlertIcon className="w-7 h-7" />
+        </div>
         <p className="font-bold">Could not load the seat map</p>
         <p className="text-sm text-ink-soft mt-1">Please try again in a moment.</p>
       </div>
@@ -133,9 +135,12 @@ export default function SeatSelection() {
           <div className="flex-1 min-w-0">
             <h2 className="font-extrabold tracking-tight mb-3">Your selection</h2>
             {mySeats.length === 0 ? (
-              <p className="text-sm font-medium text-ink-soft">
-                💺 Tap an available seat to hold it — held seats are reserved for you for{' '}
-                <span className="font-bold text-ink">5 minutes</span>.
+              <p className="text-sm font-medium text-ink-soft inline-flex items-start gap-1.5">
+                <SeatIcon className="w-4 h-4 mt-0.5 shrink-0 text-brand-600" />
+                <span>
+                  Tap an available seat to hold it — held seats are reserved for you for{' '}
+                  <span className="font-bold text-ink">5 minutes</span>.
+                </span>
               </p>
             ) : (
               <ul className="flex flex-wrap gap-2.5">
@@ -159,7 +164,7 @@ export default function SeatSelection() {
             )}
           </div>
 
-          <div className="flex items-center gap-5 lg:border-l lg:border-slate-100 lg:pl-6 shrink-0">
+          <div className="flex flex-wrap items-center gap-3 lg:gap-5 lg:border-l lg:border-slate-100 lg:pl-6 shrink-0">
             {mySeats.length > 0 && earliestExpiry && (
               <div className="text-sm font-semibold text-brand-800 bg-brand-50 border border-brand-100 rounded-xl px-3.5 py-2.5">
                 <span className="block text-[10px] font-bold uppercase tracking-wide text-ink-soft">
@@ -168,7 +173,7 @@ export default function SeatSelection() {
                 <LockCountdown expiresAt={earliestExpiry} onExpire={invalidate} />
               </div>
             )}
-            <div className="text-right">
+            <div className="text-right ml-auto lg:ml-0">
               <p className="text-[10px] font-bold uppercase tracking-wide text-ink-soft">
                 Seat fees
               </p>
@@ -177,7 +182,7 @@ export default function SeatSelection() {
             <button
               disabled={mySeats.length === 0}
               onClick={() => navigate(`/flights/${flightId}/passengers`)}
-              className="h-12 px-6 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-brand-600 to-violet-glow shadow-soft hover:shadow-lift hover:opacity-95 active:scale-[0.99] transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+              className="h-12 px-6 w-full sm:w-auto rounded-xl text-sm font-bold text-white bg-gradient-to-r from-brand-600 to-violet-glow shadow-soft hover:shadow-lift hover:opacity-95 active:scale-[0.99] transition-all disabled:opacity-40 disabled:cursor-not-allowed"
               title="Continue to passenger details"
             >
               Continue

@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { bookingApi, type Booking } from '../../features/booking/api';
-import { CheckInIcon } from '../../components/ui/icons';
+import { CheckInIcon, LuggageIcon } from '../../components/ui/icons';
 
 const CHECKIN_OPENS_HOURS_BEFORE = 24;
 
@@ -61,7 +61,9 @@ export default function CheckIn() {
 
       {eligible.length === 0 ? (
         <div className="bg-white rounded-2xl border border-dashed border-slate-200 p-12 text-center">
-          <p className="text-4xl mb-3">🛄</p>
+          <div className="mx-auto mb-4 w-16 h-16 rounded-2xl bg-brand-50 text-brand-600 flex items-center justify-center">
+            <LuggageIcon className="w-8 h-8" />
+          </div>
           <p className="text-lg font-bold text-ink">No upcoming flights to check in</p>
           <p className="text-sm text-ink-soft mt-1 mb-6">
             Confirmed bookings appear here once you have a trip coming up.

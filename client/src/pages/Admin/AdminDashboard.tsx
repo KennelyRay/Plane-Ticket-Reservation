@@ -14,7 +14,7 @@ import { printBoardingPass } from '../../features/booking/printBoardingPass';
 import { flightApi } from '../../features/flight/api';
 import type { Flight } from '../../types';
 import BoardingPassCard from '../../components/booking/BoardingPassCard';
-import { CheckInIcon, PlaneIcon, TicketIcon, XIcon } from '../../components/ui/icons';
+import { CheckIcon, CheckInIcon, LuggageIcon, PlaneIcon, TicketIcon, XIcon } from '../../components/ui/icons';
 
 type Tab = 'overview' | 'flights' | 'users';
 
@@ -313,9 +313,10 @@ function GateCell({ flight, onError }: { flight: AdminFlight; onError: (msg: str
       <button
         disabled={mutation.isPending}
         onClick={() => mutation.mutate()}
+        aria-label="Save gate and terminal"
         className={`${actionBtn} border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100`}
       >
-        ✓
+        <CheckIcon className="w-3.5 h-3.5" />
       </button>
       <button
         onClick={() => {
@@ -323,9 +324,10 @@ function GateCell({ flight, onError }: { flight: AdminFlight; onError: (msg: str
           setGate(flight.gate ?? '');
           setTerminal(flight.terminal ?? '');
         }}
+        aria-label="Cancel edit"
         className={`${actionBtn} border-slate-200 bg-white text-ink-soft hover:bg-slate-50`}
       >
-        ✕
+        <XIcon className="w-3.5 h-3.5" />
       </button>
     </div>
   );
@@ -983,7 +985,9 @@ function UserBookingsModal({
             <div className="h-40 animate-pulse bg-slate-50 rounded-xl" />
           ) : !data || data.bookings.length === 0 ? (
             <div className="text-center py-10">
-              <p className="text-3xl mb-2">🧳</p>
+              <div className="mx-auto mb-3 w-14 h-14 rounded-2xl bg-slate-100 text-ink-soft flex items-center justify-center">
+                <LuggageIcon className="w-7 h-7" />
+              </div>
               <p className="font-bold text-ink">No bookings yet</p>
               <p className="text-sm text-ink-soft mt-1">
                 This customer hasn't made any reservations.

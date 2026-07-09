@@ -10,6 +10,7 @@ import { bookingApi } from '../../features/booking/api';
 import { useSeatSocket } from '../../hooks/useSeatSocket';
 import { useAuthStore } from '../../features/auth/store';
 import LockCountdown from '../../components/booking/LockCountdown';
+import { AlertIcon, SeatIcon } from '../../components/ui/icons';
 import type { Flight } from '../../types';
 
 const inputClass =
@@ -294,7 +295,9 @@ export default function PassengerDetails() {
   if (isError || !data)
     return (
       <div className="bg-white rounded-2xl border border-red-100 p-12 text-center">
-        <p className="text-3xl mb-2">🛰️</p>
+        <div className="mx-auto mb-3 w-14 h-14 rounded-2xl bg-red-50 text-red-500 flex items-center justify-center">
+          <AlertIcon className="w-7 h-7" />
+        </div>
         <p className="font-bold">Could not load your selection</p>
         <p className="text-sm text-ink-soft mt-1">Please try again in a moment.</p>
       </div>
@@ -303,7 +306,9 @@ export default function PassengerDetails() {
   if (mySeats.length === 0)
     return (
       <div className="bg-white rounded-2xl border border-slate-200/80 p-12 text-center animate-fade-up">
-        <p className="text-3xl mb-2">💺</p>
+        <div className="mx-auto mb-3 w-14 h-14 rounded-2xl bg-brand-50 text-brand-600 flex items-center justify-center">
+          <SeatIcon className="w-7 h-7" />
+        </div>
         <p className="font-bold">No seats held</p>
         <p className="text-sm text-ink-soft mt-1 mb-5">
           Your seat holds may have expired. Pick your seats again to continue.

@@ -7,7 +7,7 @@ import { RETURN_LEG_KEY, type ReturnLeg } from '../../features/booking/returnLeg
 import type { Airport, Flight } from '../../types';
 import AirportSelect from '../../components/ui/AirportSelect';
 import FlightPathMap from '../../components/flights/FlightPathMap';
-import { MapIcon, PlaneIcon, SearchIcon, ShieldIcon, SparkIcon, SwapIcon, TicketIcon, XIcon } from '../../components/ui/icons';
+import { AlertIcon, MapIcon, PlaneIcon, SearchIcon, ShieldIcon, SparkIcon, SwapIcon, TicketIcon, XIcon } from '../../components/ui/icons';
 
 const formatTime = (iso: string) =>
   new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -761,11 +761,14 @@ export default function FlightSearch() {
         )}
 
         {executed.trip === 'round' && executed.returnDate && (
-          <div className="mb-4 p-3.5 rounded-xl bg-brand-50 border border-brand-100 text-brand-800 text-sm font-semibold animate-fade-in">
-            ✈️ Round trip — pick your <span className="font-extrabold">outbound</span> flight first.
-            After payment we'll bring you back for the return leg (
-            {executed.destination || 'anywhere'} → {executed.origin || 'anywhere'} ·{' '}
-            {formatDate(executed.returnDate)}).
+          <div className="mb-4 p-3.5 rounded-xl bg-brand-50 border border-brand-100 text-brand-800 text-sm font-semibold animate-fade-in flex items-start gap-2">
+            <PlaneIcon className="w-4 h-4 -rotate-45 mt-0.5 shrink-0 text-brand-600" />
+            <span>
+              Round trip — pick your <span className="font-extrabold">outbound</span> flight first.
+              After payment we'll bring you back for the return leg (
+              {executed.destination || 'anywhere'} → {executed.origin || 'anywhere'} ·{' '}
+              {formatDate(executed.returnDate)}).
+            </span>
           </div>
         )}
 
@@ -779,7 +782,9 @@ export default function FlightSearch() {
 
         {isError && (
           <div className="bg-white rounded-2xl border border-red-100 p-10 text-center">
-            <p className="text-3xl mb-2">🛰️</p>
+            <div className="mx-auto mb-3 w-14 h-14 rounded-2xl bg-red-50 text-red-500 flex items-center justify-center">
+              <AlertIcon className="w-7 h-7" />
+            </div>
             <p className="font-bold text-ink">We couldn't reach the booking service</p>
             <p className="text-sm text-ink-soft mt-1">Please try again in a moment.</p>
           </div>
@@ -787,7 +792,9 @@ export default function FlightSearch() {
 
         {data && data.flights.length === 0 && (
           <div className="bg-white rounded-2xl border border-slate-200/80 p-12 text-center animate-fade-in">
-            <p className="text-4xl mb-3">🛫</p>
+            <div className="mx-auto mb-4 w-16 h-16 rounded-2xl bg-brand-50 text-brand-600 flex items-center justify-center">
+              <PlaneIcon className="w-8 h-8 -rotate-45" />
+            </div>
             <p className="text-lg font-bold text-ink">No flights on this route yet</p>
             <p className="text-sm text-ink-soft mt-1">
               Try different airports or another date — popular routes always have seats.

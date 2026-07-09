@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useAuthStore } from '../../features/auth/store';
 import { bookingApi, type Booking } from '../../features/booking/api';
 import { statusChip } from '../Booking/BookingDetail';
-import { CheckInIcon, PlaneIcon, SearchIcon, TicketIcon } from '../../components/ui/icons';
+import { CheckInIcon, GlobeIcon, PlaneIcon, SearchIcon, TicketIcon } from '../../components/ui/icons';
 
 const today = new Date().toLocaleDateString([], {
   weekday: 'long',
@@ -167,8 +167,7 @@ export default function Dashboard() {
           Hello,{' '}
           <span className="bg-gradient-to-r from-brand-600 to-violet-glow bg-clip-text text-transparent">
             {user?.firstName}
-          </span>{' '}
-          👋
+          </span>
         </h1>
         <p className="text-ink-soft font-medium mt-2">
           Signed in as <span className="font-bold text-ink">{user?.email}</span>
@@ -185,7 +184,9 @@ export default function Dashboard() {
           to="/flights"
           className="group block rounded-3xl border-2 border-dashed border-slate-200 bg-white/60 p-8 text-center hover:border-brand-300 hover:bg-brand-50/40 transition-colors"
         >
-          <p className="text-3xl mb-2">🌏</p>
+          <div className="mx-auto mb-3 w-14 h-14 rounded-2xl bg-brand-50 text-brand-600 flex items-center justify-center group-hover:scale-105 transition-transform">
+            <GlobeIcon className="w-7 h-7" />
+          </div>
           <p className="font-extrabold text-ink">No upcoming trips</p>
           <p className="text-sm font-medium text-ink-soft mt-1">
             Where to next? Search flights and lock in your favorite seat.
