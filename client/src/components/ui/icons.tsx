@@ -68,6 +68,37 @@ export const CheckInIcon = ({ className = 'w-5 h-5' }: IconProps) => (
   </svg>
 );
 
+export const HomeIcon = ({ className = 'w-5 h-5' }: IconProps) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden>
+    <path d="M3 10.5 12 3l9 7.5" />
+    <path d="M5 9.5V20a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9.5" />
+    <path d="M9.5 21v-6h5v6" />
+  </svg>
+);
+
+export const UserIcon = ({ className = 'w-5 h-5' }: IconProps) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden>
+    <circle cx="12" cy="8" r="4" />
+    <path d="M4 21c0-4 3.5-6 8-6s8 2 8 6" />
+  </svg>
+);
+
+export const GridIcon = ({ className = 'w-5 h-5' }: IconProps) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden>
+    <rect x="3" y="3" width="7" height="7" rx="1.5" />
+    <rect x="14" y="3" width="7" height="7" rx="1.5" />
+    <rect x="3" y="14" width="7" height="7" rx="1.5" />
+    <rect x="14" y="14" width="7" height="7" rx="1.5" />
+  </svg>
+);
+
+export const LogoutIcon = ({ className = 'w-5 h-5' }: IconProps) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden>
+    <path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3" />
+    <path d="M10 17l-5-5 5-5M4 12h11" />
+  </svg>
+);
+
 /**
  * VertixFlights brand mark: a "V" chevron cut by a rising contrail
  * with a plane at its tip, on a brand-gradient tile.
