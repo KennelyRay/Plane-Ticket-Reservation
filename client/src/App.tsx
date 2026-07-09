@@ -20,11 +20,15 @@ export default function App() {
       <Routes>
         <Route element={<MainLayout />}>
           <Route index element={<Landing />} />
-          <Route path="/flights" element={<FlightSearch />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
 
-          <Route element={<ProtectedRoute />}>
+          {/* Public browsing, but admins are bounced to their console */}
+          <Route element={<ProtectedRoute denyRoles={['ADMIN']} allowGuests />}>
+            <Route path="/flights" element={<FlightSearch />} />
+          </Route>
+
+          <Route element={<ProtectedRoute denyRoles={['ADMIN']} />}>
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/flights/:flightId/seats" element={<SeatSelection />} />
             <Route path="/flights/:flightId/passengers" element={<PassengerDetails />} />

@@ -55,3 +55,12 @@ export const authorize =
     if (!roles.includes(req.user.role)) return next(ApiError.forbidden('Insufficient permissions'));
     next();
   };
+
+/** Rejects the listed roles; used to keep admins out of customer-only modules. */
+export const denyRoles =
+  (...roles: string[]) =>
+  (req: Request, _res: Response, next: NextFunction) => {
+    if (!req.user) return next(ApiError.unauthorized('Authentication required'));
+    if (roles.includes(req.user.role)) return next(ApiError.forbidden('Insufficient permissions'));
+    next();
+  };

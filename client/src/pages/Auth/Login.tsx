@@ -24,6 +24,7 @@ const labelClass = 'block text-[11px] font-bold uppercase tracking-wide text-ink
 export default function Login() {
   const navigate = useNavigate();
   const setAuth = useAuthStore((s) => s.setAuth);
+  const isAdmin = useAuthStore((s) => s.user?.role === 'ADMIN');
   const [serverError, setServerError] = useState<string | null>(null);
   const [welcomeName, setWelcomeName] = useState<string | null>(null);
 
@@ -46,7 +47,7 @@ export default function Login() {
     }
   };
 
-  const goToDashboard = () => navigate('/dashboard');
+  const goToDashboard = () => navigate(isAdmin ? '/admin' : '/dashboard');
 
   return (
     <AuthShell title="Welcome back" subtitle="Sign in to manage your bookings and check in faster.">
@@ -92,20 +93,26 @@ export default function Login() {
         onClose={goToDashboard}
         tone="brand"
         title={`Welcome back, ${welcomeName}!`}
-        message="You're signed in and ready to fly. Your bookings and check-ins are one tap away."
+        message={
+          isAdmin
+            ? "You're signed in as an administrator. Your operations console is ready."
+            : "You're signed in and ready to fly. Your bookings and check-ins are one tap away."
+        }
       >
         <button
           onClick={goToDashboard}
           className="w-full h-11 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-brand-600 to-violet-glow shadow-soft hover:shadow-lift hover:opacity-95 active:scale-[0.99] transition-all"
         >
-          Continue to dashboard
+          {isAdmin ? 'Open admin dashboard' : 'Continue to dashboard'}
         </button>
-        <Link
-          to="/flights"
-          className="w-full h-11 rounded-xl inline-flex items-center justify-center text-sm font-bold text-ink-soft border border-slate-200 hover:border-brand-300 hover:text-brand-700 transition-colors"
-        >
-          Browse flights
-        </Link>
+        {!isAdmin && (
+          <Link
+            to="/flights"
+            className="w-full h-11 rounded-xl inline-flex items-center justify-center text-sm font-bold text-ink-soft border border-slate-200 hover:border-brand-300 hover:text-brand-700 transition-colors"
+          >
+            Browse flights
+          </Link>
+        )}
       </SuccessModal>
     </AuthShell>
   );

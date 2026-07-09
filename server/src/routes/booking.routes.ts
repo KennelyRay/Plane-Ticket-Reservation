@@ -1,10 +1,11 @@
 import { Router } from 'express';
 import { bookingController } from '../controllers/booking.controller';
-import { authenticate } from '../middleware/auth';
+import { authenticate, denyRoles } from '../middleware/auth';
 
 const router = Router();
 
-router.use(authenticate);
+// Bookings are a customer module — admins manage flights via /admin instead.
+router.use(authenticate, denyRoles('ADMIN'));
 
 router.post('/', bookingController.create);
 router.get('/', bookingController.listMine);

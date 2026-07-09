@@ -1,9 +1,9 @@
 import { Router } from 'express';
 import { paymentController } from '../controllers/payment.controller';
-import { authenticate } from '../middleware/auth';
+import { authenticate, denyRoles } from '../middleware/auth';
 
 const router = Router();
 
-router.post('/', authenticate, paymentController.pay);
+router.post('/', authenticate, denyRoles('ADMIN'), paymentController.pay);
 
 export default router;

@@ -102,10 +102,10 @@ export default function Landing() {
             </Link>
             {user ? (
               <Link
-                to="/bookings"
+                to={user.role === 'ADMIN' ? '/admin' : '/bookings'}
                 className="h-12 px-7 inline-flex items-center rounded-xl text-sm font-bold text-ink border border-slate-200 bg-white hover:border-brand-300 hover:text-brand-700 transition-colors"
               >
-                My bookings
+                {user.role === 'ADMIN' ? 'Admin dashboard' : 'My bookings'}
               </Link>
             ) : (
               <Link

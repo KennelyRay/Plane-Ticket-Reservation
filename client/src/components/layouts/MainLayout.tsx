@@ -75,21 +75,26 @@ export default function MainLayout() {
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
           <Wordmark />
           <nav className="flex items-center gap-1 sm:gap-2">
-            <NavLink to="/flights" className={navLinkClass}>
-              Flights
-            </NavLink>
+            {user?.role !== 'ADMIN' && (
+              <NavLink to="/flights" className={navLinkClass}>
+                Flights
+              </NavLink>
+            )}
             {user ? (
               <>
-                <NavLink to="/dashboard" className={navLinkClass}>
-                  Dashboard
-                </NavLink>
-                <NavLink to="/bookings" className={navLinkClass}>
-                  Bookings
-                </NavLink>
-                {user.role === 'ADMIN' && (
+                {user.role === 'ADMIN' ? (
                   <NavLink to="/admin" className={navLinkClass}>
-                    Admin
+                    Admin Dashboard
                   </NavLink>
+                ) : (
+                  <>
+                    <NavLink to="/dashboard" className={navLinkClass}>
+                      Dashboard
+                    </NavLink>
+                    <NavLink to="/bookings" className={navLinkClass}>
+                      Bookings
+                    </NavLink>
+                  </>
                 )}
                 <div className="hidden sm:flex items-center gap-2 ml-2 pl-3 border-l border-slate-200">
                   <span className="w-8 h-8 rounded-full bg-gradient-to-br from-brand-600 to-violet-glow text-white text-xs font-bold flex items-center justify-center">
