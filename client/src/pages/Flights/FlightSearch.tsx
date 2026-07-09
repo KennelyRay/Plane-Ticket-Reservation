@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { flightApi } from '../../features/flight/api';
@@ -6,7 +7,7 @@ import { RETURN_LEG_KEY, type ReturnLeg } from '../../features/booking/returnLeg
 import type { Airport, Flight } from '../../types';
 import AirportSelect from '../../components/ui/AirportSelect';
 import FlightPathMap from '../../components/flights/FlightPathMap';
-import { PlaneIcon, SearchIcon, ShieldIcon, SparkIcon, SwapIcon, TicketIcon, XIcon } from '../../components/ui/icons';
+import { MapIcon, PlaneIcon, SearchIcon, ShieldIcon, SparkIcon, SwapIcon, TicketIcon, XIcon } from '../../components/ui/icons';
 
 const formatTime = (iso: string) =>
   new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -67,6 +68,77 @@ function DockNotch({ position }: { position: string }) {
   );
 }
 
+/**
+ * Tap-to-open route map for touch / small screens, where the desktop hover
+ * popover isn't available. Rendered through a portal so the card's transforms
+ * don't trap the fixed overlay. The SVG is forced to fill its container so the
+ * 420px map scales down to the phone width.
+ */
+function FlightRouteModal({
+  flight,
+  airports,
+  onClose,
+}: {
+  flight: Flight;
+  airports: Airport[];
+  onClose: () => void;
+}) {
+  const { route, airline } = flight;
+  return createPortal(
+    <div
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-ink/50 backdrop-blur-sm sm:p-4 animate-fade-in"
+      onClick={onClose}
+    >
+      <div
+        className="w-full sm:max-w-lg bg-white rounded-t-3xl sm:rounded-2xl border border-slate-200 shadow-lift p-4 sm:p-5 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:pb-5 animate-fade-up"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="sm:hidden mx-auto mb-3 h-1.5 w-10 rounded-full bg-slate-200" />
+        <div className="flex items-start justify-between gap-3 mb-3">
+          <div className="min-w-0">
+            <p className="text-[11px] font-bold uppercase tracking-wide text-ink-soft">
+              Flight route
+            </p>
+            <p className="font-extrabold tracking-tight truncate">
+              {route.originAirport.city} → {route.destinationAirport.city}
+            </p>
+            <p className="text-xs font-medium text-ink-soft truncate">
+              {airline.name} · {flight.flightNumber}
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            aria-label="Close route map"
+            className="w-9 h-9 shrink-0 rounded-lg border border-slate-200 text-ink-soft hover:bg-slate-50 flex items-center justify-center"
+          >
+            <XIcon className="w-4 h-4" />
+          </button>
+        </div>
+
+        <div className="[&_svg]:w-full [&_svg]:h-auto rounded-xl overflow-hidden border border-slate-200/70">
+          <FlightPathMap
+            airports={airports}
+            origin={route.originAirport}
+            destination={route.destinationAirport}
+          />
+        </div>
+
+        <div className="flex items-center justify-between mt-3 text-xs font-semibold text-ink-soft">
+          <span className="font-bold text-ink">
+            {route.originAirport.iataCode} → {route.destinationAirport.iataCode}
+          </span>
+          <span>
+            {route.distanceKm
+              ? `${Number(route.distanceKm).toLocaleString()} km · direct`
+              : 'Direct'}
+          </span>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
 function FlightCard({
   flight,
   index,
@@ -86,6 +158,7 @@ function FlightCard({
   // Flip the map popover under the card when the card sits too close to the
   // top of the viewport for it to fit above (measured as the hover starts).
   const [mapBelow, setMapBelow] = useState(false);
+  const [showMap, setShowMap] = useState(false);
 
   return (
     <article
@@ -195,6 +268,18 @@ function FlightCard({
               </p>
             </div>
           </div>
+
+          {/* Tap-to-view route map — the hover preview above is desktop-only */}
+          {hasPath && (
+            <button
+              type="button"
+              onClick={() => setShowMap(true)}
+              className="lg:hidden mt-4 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-slate-200 bg-white text-xs font-bold text-brand-700 hover:border-brand-300 hover:bg-brand-50 transition-colors"
+            >
+              <MapIcon className="w-3.5 h-3.5" />
+              View route map
+            </button>
+          )}
         </div>
 
         {/* Fare stub — perforated like a paper ticket */}
@@ -233,6 +318,10 @@ function FlightCard({
           />
         </div>
       </div>
+
+      {showMap && hasPath && (
+        <FlightRouteModal flight={flight} airports={airports} onClose={() => setShowMap(false)} />
+      )}
     </article>
   );
 }

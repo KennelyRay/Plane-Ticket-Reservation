@@ -99,6 +99,13 @@ export const LogoutIcon = ({ className = 'w-5 h-5' }: IconProps) => (
   </svg>
 );
 
+export const MapIcon = ({ className = 'w-5 h-5' }: IconProps) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden>
+    <path d="M9 3 3.5 5.2a1 1 0 0 0-.5.9v13.1a1 1 0 0 0 1.4.9L9 18l6 3 5.1-2.2a1 1 0 0 0 .5-.9V4.8a1 1 0 0 0-1.4-.9L15 6 9 3Z" />
+    <path d="M9 3v15M15 6v15" />
+  </svg>
+);
+
 /**
  * VertixFlights brand mark: a "V" chevron cut by a rising contrail
  * with a plane at its tip, on a brand-gradient tile.
