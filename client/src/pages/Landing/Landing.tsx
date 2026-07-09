@@ -1,9 +1,5 @@
-import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
 import { useAuthStore } from '../../features/auth/store';
-import { flightApi } from '../../features/flight/api';
-import AirportSelect from '../../components/ui/AirportSelect';
 import { DESTINATION_IMAGES } from '../../components/flights/destinationImages';
 import {
   CheckInIcon,
@@ -15,11 +11,6 @@ import {
   TicketIcon,
 } from '../../components/ui/icons';
 import heroWing from '../../assets/hero-wing.jpg';
-
-const toISODate = (d: Date) => {
-  const local = new Date(d.getTime() - d.getTimezoneOffset() * 60000);
-  return local.toISOString().slice(0, 10);
-};
 
 const STATS = [
   { value: '50', label: 'Airports' },
@@ -96,123 +87,80 @@ const STEPS = [
   },
 ];
 
-function QuickSearch() {
-  const { data: airports = [] } = useQuery({
-    queryKey: ['airports'],
-    queryFn: flightApi.airports,
-    staleTime: Infinity,
-  });
-  const [origin, setOrigin] = useState('MNL');
-  const [destination, setDestination] = useState('CEB');
-  const [date, setDate] = useState('');
-
-  const params = new URLSearchParams({
-    origin,
-    destination,
-    trip: 'one',
-    sort: 'departure',
-    page: '1',
-  });
-  if (date) params.set('date', date);
-
-  const cell = 'relative flex-1 px-4 py-3';
-
-  return (
-    <div className="relative z-10 -mt-16 sm:-mt-20 mx-2 sm:mx-8 lg:mx-12 animate-fade-up" style={{ animationDelay: '220ms' }}>
-      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-lift p-1.5 flex flex-col lg:flex-row lg:items-stretch">
-        <div className={`${cell} lg:border-r border-b lg:border-b-0 border-slate-100`}>
-          <AirportSelect label="From" value={origin} onChange={setOrigin} airports={airports} />
-        </div>
-        <div className={`${cell} lg:border-r border-b lg:border-b-0 border-slate-100`}>
-          <AirportSelect
-            label="To"
-            value={destination}
-            onChange={setDestination}
-            airports={airports}
-            hintClass="text-violet-glow/80"
-            align="left"
-          />
-        </div>
-        <div className={`${cell} border-b lg:border-b-0`}>
-          <label className="block text-[10px] font-bold uppercase tracking-[0.14em] text-ink-soft mb-0.5">
-            Depart
-          </label>
-          <input
-            type="date"
-            value={date}
-            min={toISODate(new Date())}
-            onChange={(e) => setDate(e.target.value)}
-            className="w-full h-8 bg-transparent text-xl font-extrabold tracking-tight text-ink focus:outline-none"
-          />
-          <p className="text-[11px] font-semibold text-ink-soft">{date ? 'One way' : 'Any date'}</p>
-        </div>
-        <div className="p-1.5 lg:pl-2 flex items-stretch">
-          <Link
-            to={`/flights?${params.toString()}`}
-            className="w-full lg:w-auto px-7 min-h-14 rounded-xl inline-flex items-center justify-center gap-2 text-sm font-bold text-white bg-gradient-to-r from-brand-600 to-violet-glow shadow-soft hover:shadow-lift hover:opacity-95 active:scale-[0.98] transition-all"
-          >
-            <SearchIcon className="w-4 h-4" />
-            Search flights
-          </Link>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 export default function Landing() {
   const user = useAuthStore((s) => s.user);
 
   return (
     <div className="space-y-16 sm:space-y-24">
-      {/* ── Hero + search ────────────────────────────────────── */}
-      <div>
-        <section className="relative overflow-hidden rounded-[1.75rem] sm:rounded-[2rem] shadow-lift">
-          <img
-            src={heroWing}
-            alt="Airplane wing above sunset clouds"
-            className="absolute inset-0 w-full h-full object-cover"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-brand-950 via-brand-950/75 to-brand-950/25" />
-          <div className="absolute inset-0 bg-gradient-to-br from-brand-950/50 via-transparent to-transparent" />
+      {/* ── Hero ─────────────────────────────────────────────── */}
+      <section className="relative overflow-hidden rounded-[1.75rem] sm:rounded-[2rem] shadow-lift">
+        <img
+          src={heroWing}
+          alt="Airplane wing above sunset clouds"
+          className="absolute inset-0 w-full h-full object-cover"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-brand-950 via-brand-950/75 to-brand-950/25" />
+        <div className="absolute inset-0 bg-gradient-to-br from-brand-950/50 via-transparent to-transparent" />
 
-          <div className="relative px-5 sm:px-10 lg:px-14 pt-12 sm:pt-16 lg:pt-20 pb-24 sm:pb-28">
-            <p className="inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.18em] text-brand-100 bg-white/10 border border-white/20 rounded-full px-3 py-1.5 mb-6 animate-fade-in">
-              <PlaneIcon className="w-3.5 h-3.5 -rotate-45" />
-              The Philippines' friendliest way to fly
-            </p>
-            <h1 className="max-w-2xl text-white text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight leading-[1.03] animate-fade-up">
-              Every island.
-              <br />
-              Every seat.{' '}
-              <span className="bg-gradient-to-r from-brand-300 to-violet-300 bg-clip-text text-transparent">
-                Your pick.
-              </span>
-            </h1>
-            <p
-              className="mt-5 max-w-lg text-[15px] sm:text-base font-medium text-brand-100/90 leading-relaxed animate-fade-up"
-              style={{ animationDelay: '90ms' }}
+        <div className="relative px-5 sm:px-10 lg:px-14 pt-12 sm:pt-16 lg:pt-24 pb-12 sm:pb-16 lg:pb-20">
+          <p className="inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.18em] text-brand-100 bg-white/10 border border-white/20 rounded-full px-3 py-1.5 mb-6 animate-fade-in">
+            <PlaneIcon className="w-3.5 h-3.5 -rotate-45" />
+            The Philippines' friendliest way to fly
+          </p>
+          <h1 className="max-w-2xl text-white text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight leading-[1.03] animate-fade-up">
+            Every island.
+            <br />
+            Every seat.{' '}
+            <span className="bg-gradient-to-r from-brand-300 to-violet-300 bg-clip-text text-transparent">
+              Your pick.
+            </span>
+          </h1>
+          <p
+            className="mt-5 max-w-lg text-[15px] sm:text-base font-medium text-brand-100/90 leading-relaxed animate-fade-up"
+            style={{ animationDelay: '90ms' }}
+          >
+            Search live schedules across 50 airports, choose your exact seat on a real-time cabin
+            map, and check in from your phone — from Batanes to Bangkok.
+          </p>
+
+          <div className="mt-8 flex flex-wrap items-center gap-3 animate-fade-up" style={{ animationDelay: '150ms' }}>
+            <Link
+              to="/flights"
+              className="h-12 px-7 inline-flex items-center gap-2 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-brand-600 to-violet-glow shadow-soft hover:shadow-lift hover:opacity-95 active:scale-[0.98] transition-all"
             >
-              Search live schedules across 50 airports, choose your exact seat on a real-time cabin
-              map, and check in from your phone — from Batanes to Bangkok.
-            </p>
-
-            <dl className="mt-8 flex items-center gap-7 sm:gap-10 animate-fade-up" style={{ animationDelay: '160ms' }}>
-              {STATS.map((s) => (
-                <div key={s.label}>
-                  <dt className="sr-only">{s.label}</dt>
-                  <dd className="text-2xl sm:text-3xl font-extrabold tracking-tight tabular-nums text-white">
-                    {s.value}
-                  </dd>
-                  <p className="text-[11px] font-semibold text-brand-200/80 mt-0.5">{s.label}</p>
-                </div>
-              ))}
-            </dl>
+              <SearchIcon className="w-4 h-4" />
+              Search flights
+            </Link>
+            {user ? (
+              <Link
+                to={user.role === 'ADMIN' ? '/admin' : '/bookings'}
+                className="h-12 px-7 inline-flex items-center rounded-xl text-sm font-bold text-white border border-white/25 bg-white/10 hover:bg-white/15 transition-colors"
+              >
+                {user.role === 'ADMIN' ? 'Admin dashboard' : 'My bookings'}
+              </Link>
+            ) : (
+              <Link
+                to="/register"
+                className="h-12 px-7 inline-flex items-center rounded-xl text-sm font-bold text-white border border-white/25 bg-white/10 hover:bg-white/15 transition-colors"
+              >
+                Create an account
+              </Link>
+            )}
           </div>
-        </section>
 
-        <QuickSearch />
-      </div>
+          <dl className="mt-9 flex items-center gap-7 sm:gap-10 animate-fade-up" style={{ animationDelay: '220ms' }}>
+            {STATS.map((s) => (
+              <div key={s.label}>
+                <dt className="sr-only">{s.label}</dt>
+                <dd className="text-2xl sm:text-3xl font-extrabold tracking-tight tabular-nums text-white">
+                  {s.value}
+                </dd>
+                <p className="text-[11px] font-semibold text-brand-200/80 mt-0.5">{s.label}</p>
+              </div>
+            ))}
+          </dl>
+        </div>
+      </section>
 
       {/* ── Departures board ─────────────────────────────────── */}
       <section className="relative overflow-hidden rounded-3xl bg-[#0b1220] text-white shadow-lift border border-white/10">
