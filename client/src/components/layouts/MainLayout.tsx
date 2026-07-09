@@ -73,7 +73,7 @@ export default function MainLayout() {
     <div className="min-h-screen flex flex-col">
       <BackgroundScene />
       <header className="sticky top-0 z-20 bg-white/80 backdrop-blur-xl border-b border-slate-200/70">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+        <div className="max-w-[84rem] mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
           <Wordmark />
           <nav className="hidden sm:flex items-center gap-1 sm:gap-2">
             {user?.role !== 'ADMIN' && (
@@ -133,12 +133,12 @@ export default function MainLayout() {
         </div>
       </header>
 
-      <main className="flex-1 w-full max-w-6xl mx-auto px-4 sm:px-6 pt-8 pb-24 sm:py-8">
+      <main className="flex-1 w-full max-w-[84rem] mx-auto px-4 sm:px-6 pt-8 pb-24 sm:py-8">
         <Outlet />
       </main>
 
       <footer className="border-t border-slate-200/70 bg-white pb-16 sm:pb-0">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="max-w-[84rem] mx-auto px-4 sm:px-6 py-8 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <LogoMark className="w-7 h-7" />
             <span className="text-sm font-bold">
