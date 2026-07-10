@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { useAuthStore } from '../../features/auth/store';
 import { flightApi } from '../../features/flight/api';
 import { useNow } from '../../hooks/useNow';
@@ -124,15 +124,29 @@ export default function Landing() {
 
   const active = HERO_SLIDES[slide];
 
-  // Live departures out of Manila: refetched every 30s, statuses re-derived
-  // every 30s in between so Boarding/Departed roll over on time.
+  // Live departures board: any airport can be picked as the origin, refetched
+  // every 30s, statuses re-derived every 30s in between so Boarding/Departed
+  // roll over on time.
   const now = useNow(30_000);
-  const { data: departuresData } = useQuery({
-    queryKey: ['landing-departures'],
-    queryFn: () => flightApi.search({ origin: 'MNL', sort: 'departure', page: 1, pageSize: 6 }),
+  const [boardOrigin, setBoardOrigin] = useState('MNL');
+  const { data: airports = [] } = useQuery({
+    queryKey: ['airports'],
+    queryFn: flightApi.airports,
+    staleTime: Infinity,
+  });
+  const boardAirports = useMemo(
+    () => [...airports].sort((a, b) => a.city.localeCompare(b.city)),
+    [airports]
+  );
+  const { data: departuresData, isPlaceholderData: boardSwitching } = useQuery({
+    queryKey: ['landing-departures', boardOrigin],
+    queryFn: () =>
+      flightApi.search({ origin: boardOrigin, sort: 'departure', page: 1, pageSize: 6 }),
     refetchInterval: 30_000,
+    placeholderData: keepPreviousData,
   });
   const departures = departuresData?.flights ?? [];
+  const boardAirport = airports.find((a) => a.iataCode === boardOrigin);
 
   return (
     <div className="space-y-14 sm:space-y-20">
@@ -239,7 +253,32 @@ export default function Landing() {
                 <p className="text-[11px] uppercase tracking-[0.22em] text-white/50 font-bold">
                   Departures
                 </p>
-                <p className="font-extrabold tracking-tight">Manila · NAIA Terminal 2</p>
+                {/* Airport picker — restyled native select so the board stays a board */}
+                <div className="relative inline-flex items-center">
+                  <select
+                    value={boardOrigin}
+                    onChange={(e) => setBoardOrigin(e.target.value)}
+                    aria-label="Choose departure airport"
+                    className="appearance-none bg-transparent font-extrabold tracking-tight text-white pr-5 cursor-pointer rounded focus:outline-none focus:ring-2 focus:ring-white/30 [&>option]:text-ink [&>option]:font-semibold"
+                  >
+                    {(boardAirports.length
+                      ? boardAirports
+                      : [{ id: 'mnl', iataCode: 'MNL', city: 'Manila' }]
+                    ).map((a) => (
+                      <option key={a.iataCode} value={a.iataCode}>
+                        {a.city} · {a.iataCode}
+                      </option>
+                    ))}
+                  </select>
+                  <span aria-hidden className="pointer-events-none absolute right-0 text-white/50 text-[10px]">
+                    ▼
+                  </span>
+                </div>
+                {boardAirport && (
+                  <p className="text-[11px] font-semibold text-white/45 truncate max-w-56">
+                    {boardAirport.name}
+                  </p>
+                )}
               </div>
             </div>
             <span className="inline-flex items-center gap-2 text-[11px] font-bold text-emerald-300">
@@ -256,13 +295,19 @@ export default function Landing() {
             <span className="text-right">Status</span>
           </div>
 
-          <ul className="divide-y divide-white/5 flex-1">
-            {departures.length === 0 &&
+          <ul className={`divide-y divide-white/5 flex-1 transition-opacity ${boardSwitching ? 'opacity-50' : ''}`}>
+            {!departuresData &&
               Array.from({ length: 6 }).map((_, i) => (
                 <li key={i} className="px-5 sm:px-7 py-[1.15rem] animate-pulse">
                   <span className="block h-4 rounded bg-white/10" style={{ width: `${55 + (i % 3) * 12}%` }} />
                 </li>
               ))}
+            {departuresData && departures.length === 0 && (
+              <li className="px-5 sm:px-7 py-12 text-center text-sm font-semibold text-white/45">
+                No upcoming departures from {boardAirport?.city ?? 'this airport'} — try another
+                airport.
+              </li>
+            )}
             {departures.map((f) => {
               const status = boardStatus(f, now);
               return (
