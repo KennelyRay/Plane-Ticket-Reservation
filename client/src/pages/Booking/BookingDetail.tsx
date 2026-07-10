@@ -323,6 +323,7 @@ export default function BookingDetail() {
               </span>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-bold text-ink">
+                  {bp.passenger.title ? `${bp.passenger.title} ` : ''}
                   {bp.passenger.firstName} {bp.passenger.lastName}
                 </p>
                 <p className="text-xs font-medium text-ink-soft capitalize">

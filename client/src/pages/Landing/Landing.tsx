@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuthStore } from '../../features/auth/store';
 import { DESTINATION_IMAGES } from '../../components/flights/destinationImages';
@@ -10,13 +11,26 @@ import {
   SparkIcon,
   TicketIcon,
 } from '../../components/ui/icons';
-import heroWing from '../../assets/hero-wing.jpg';
 
 const STATS = [
   { value: '50', label: 'Airports' },
   { value: '140', label: 'Routes' },
   { value: '1,900+', label: 'Flights / 2 weeks' },
 ];
+
+// Hero carousel — one full-bleed photo per destination, auto-advancing.
+// Wikimedia thumbs re-requested at 1280px (the largest bucket every hero
+// image supports; bigger sizes 400 when they exceed the original).
+const HERO_SLIDES = [
+  { code: 'MPH', city: 'Boracay', tag: 'World-famous white sand', from: 2500 },
+  { code: 'ENI', city: 'El Nido', tag: 'Hidden lagoons of Palawan', from: 2650 },
+  { code: 'NRT', city: 'Tokyo', tag: 'Neon nights & cherry blossoms', from: 8500 },
+  { code: 'TAG', city: 'Bohol', tag: 'Chocolate Hills & beaches', from: 2500 },
+  { code: 'SIN', city: 'Singapore', tag: 'The garden city escape', from: 8500 },
+  { code: 'HKG', city: 'Hong Kong', tag: 'Skyline by the harbour', from: 7800 },
+].map((s) => ({ ...s, image: DESTINATION_IMAGES[s.code].replace('/500px-', '/1280px-') }));
+
+const SLIDE_MS = 5000;
 
 // Split-flap departures board — a signature airport touch.
 const DEPARTURES = [
@@ -92,76 +106,105 @@ const STEPS = [
 export default function Landing() {
   const user = useAuthStore((s) => s.user);
 
+  // Hero destination carousel; the timer resets whenever the slide changes
+  // so a manual dot click gets a full interval before auto-advancing.
+  const [slide, setSlide] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setSlide((s) => (s + 1) % HERO_SLIDES.length), SLIDE_MS);
+    return () => clearInterval(id);
+  }, [slide]);
+
+  const active = HERO_SLIDES[slide];
+
   return (
     <div className="space-y-14 sm:space-y-20">
-      {/* ── Hero ─────────────────────────────────────────────── */}
-      <section className="relative overflow-hidden rounded-[1.75rem] sm:rounded-[2rem] shadow-lift">
-        <img
-          src={heroWing}
-          alt="Airplane wing above sunset clouds"
-          className="absolute inset-0 w-full h-full object-cover"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-brand-950 via-brand-950/75 to-brand-950/25" />
-        <div className="absolute inset-0 bg-gradient-to-br from-brand-950/50 via-transparent to-transparent" />
+      {/* ── Hero — rotating destination showcase ─────────────── */}
+      <section className="relative overflow-hidden rounded-[1.75rem] sm:rounded-[2rem] shadow-lift min-h-[480px] sm:min-h-[560px] lg:min-h-[620px] flex flex-col">
+        {HERO_SLIDES.map((s, i) => (
+          <img
+            key={s.code}
+            src={s.image}
+            alt={s.city}
+            className={`absolute inset-0 w-full h-full object-cover transition-all duration-[1400ms] ease-out ${
+              i === slide ? 'opacity-100 scale-105' : 'opacity-0 scale-100'
+            }`}
+          />
+        ))}
+        <div className="absolute inset-0 bg-gradient-to-t from-brand-950/90 via-brand-950/25 to-brand-950/45" />
 
-        <div className="relative px-5 sm:px-10 lg:px-14 pt-12 sm:pt-16 lg:pt-24 pb-12 sm:pb-16 lg:pb-20">
-          <p className="inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.18em] text-brand-100 bg-white/10 border border-white/20 rounded-full px-3 py-1.5 mb-6 animate-fade-in">
+        <div className="relative flex-1 flex flex-col items-center justify-center text-center px-5 py-16 sm:py-20">
+          <p className="inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.18em] text-white bg-white/10 border border-white/20 backdrop-blur-sm rounded-full px-3 py-1.5 mb-6 animate-fade-in">
             <PlaneIcon className="w-3.5 h-3.5 -rotate-45" />
             The Philippines' friendliest way to fly
           </p>
-          <h1 className="max-w-2xl text-white text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight leading-[1.03] animate-fade-up">
-            Every island.
-            <br />
-            Every seat.{' '}
-            <span className="bg-gradient-to-r from-brand-300 to-violet-300 bg-clip-text text-transparent">
-              Your pick.
-            </span>
+
+          {/* Big letter-spaced destination name, re-animated on each slide */}
+          <h1
+            key={active.code}
+            className="text-white text-5xl sm:text-7xl lg:text-8xl font-extrabold uppercase tracking-[0.18em] sm:tracking-[0.28em] leading-none drop-shadow-lg animate-fade-up [text-indent:0.18em] sm:[text-indent:0.28em]"
+          >
+            {active.city}
           </h1>
           <p
-            className="mt-5 max-w-lg text-[15px] sm:text-base font-medium text-brand-100/90 leading-relaxed animate-fade-up"
-            style={{ animationDelay: '90ms' }}
+            key={`${active.code}-tag`}
+            className="mt-4 text-sm sm:text-base font-semibold text-white/85 animate-fade-up"
+            style={{ animationDelay: '80ms' }}
           >
-            Search live schedules across 50 airports, choose your exact seat on a real-time cabin
-            map, and check in from your phone — from Batanes to Bangkok.
+            {active.tag} · Manila → {active.code} from ₱{active.from.toLocaleString()}
           </p>
 
-          <div className="mt-8 flex flex-wrap items-center gap-3 animate-fade-up" style={{ animationDelay: '150ms' }}>
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
             <Link
-              to="/flights"
+              to={`/flights?origin=MNL&destination=${active.code}&trip=one&sort=departure&page=1`}
               className="h-12 px-7 inline-flex items-center gap-2 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-brand-600 to-violet-glow shadow-soft hover:shadow-lift hover:opacity-95 active:scale-[0.98] transition-all"
             >
               <SearchIcon className="w-4 h-4" />
-              Search flights
+              Fly to {active.city}
             </Link>
             {user ? (
               <Link
                 to={user.role === 'ADMIN' ? '/admin' : '/bookings'}
-                className="h-12 px-7 inline-flex items-center rounded-xl text-sm font-bold text-white border border-white/25 bg-white/10 hover:bg-white/15 transition-colors"
+                className="h-12 px-7 inline-flex items-center rounded-xl text-sm font-bold text-white border border-white/25 bg-white/10 backdrop-blur-sm hover:bg-white/15 transition-colors"
               >
                 {user.role === 'ADMIN' ? 'Admin dashboard' : 'My bookings'}
               </Link>
             ) : (
               <Link
-                to="/register"
-                className="h-12 px-7 inline-flex items-center rounded-xl text-sm font-bold text-white border border-white/25 bg-white/10 hover:bg-white/15 transition-colors"
+                to="/flights"
+                className="h-12 px-7 inline-flex items-center rounded-xl text-sm font-bold text-white border border-white/25 bg-white/10 backdrop-blur-sm hover:bg-white/15 transition-colors"
               >
-                Create an account
+                Browse all flights
               </Link>
             )}
           </div>
-
-          <dl className="mt-9 flex items-center gap-7 sm:gap-10 animate-fade-up" style={{ animationDelay: '220ms' }}>
-            {STATS.map((s) => (
-              <div key={s.label}>
-                <dt className="sr-only">{s.label}</dt>
-                <dd className="text-2xl sm:text-3xl font-extrabold tracking-tight tabular-nums text-white">
-                  {s.value}
-                </dd>
-                <p className="text-[11px] font-semibold text-brand-200/80 mt-0.5">{s.label}</p>
-              </div>
-            ))}
-          </dl>
         </div>
+
+        {/* Slide dots */}
+        <div className="relative flex items-center justify-center gap-2.5 pb-6">
+          {HERO_SLIDES.map((s, i) => (
+            <button
+              key={s.code}
+              onClick={() => setSlide(i)}
+              aria-label={`Show ${s.city}`}
+              className={`h-2.5 rounded-full transition-all duration-300 ${
+                i === slide ? 'w-7 bg-white' : 'w-2.5 bg-white/45 hover:bg-white/70'
+              }`}
+            />
+          ))}
+        </div>
+
+        {/* Stats strip */}
+        <dl className="relative hidden sm:flex items-center justify-center gap-12 pb-7">
+          {STATS.map((s) => (
+            <div key={s.label} className="text-center">
+              <dt className="sr-only">{s.label}</dt>
+              <dd className="text-2xl font-extrabold tracking-tight tabular-nums text-white">
+                {s.value}
+              </dd>
+              <p className="text-[11px] font-semibold text-white/70 mt-0.5">{s.label}</p>
+            </div>
+          ))}
+        </dl>
       </section>
 
       {/* ── Departures board + why-fly panel (asymmetric) ────── */}

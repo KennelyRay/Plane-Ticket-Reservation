@@ -25,12 +25,14 @@ export interface BookingPassenger {
   fareAmount: string;
   passenger: {
     id: string;
+    title: string | null;
     firstName: string;
     lastName: string;
     dateOfBirth: string;
     gender: 'MALE' | 'FEMALE' | 'OTHER';
     nationality: string;
     passportNumber: string | null;
+    passportIssueCountry: string | null;
   };
   seat: {
     id: string;
@@ -73,12 +75,14 @@ export interface CreateBookingPayload {
   contactPhone?: string;
   passengers: {
     seatId: string;
+    title: string;
     firstName: string;
     lastName: string;
     dateOfBirth: string; // YYYY-MM-DD
     gender: 'MALE' | 'FEMALE' | 'OTHER';
     nationality: string;
-    passportNumber?: string;
+    passportNumber: string;
+    passportIssueCountry: string;
   }[];
 }
 

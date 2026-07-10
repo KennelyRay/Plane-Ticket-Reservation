@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 const passengerSchema = z.object({
   seatId: z.string().min(1),
+  title: z.string().min(1, 'Title is required').max(10),
   firstName: z.string().min(1, 'First name is required'),
   lastName: z.string().min(1, 'Last name is required'),
   dateOfBirth: z.coerce
@@ -9,7 +10,8 @@ const passengerSchema = z.object({
     .refine((d) => d < new Date(), 'Date of birth must be in the past'),
   gender: z.enum(['MALE', 'FEMALE', 'OTHER']),
   nationality: z.string().min(1, 'Nationality is required'),
-  passportNumber: z.string().optional(),
+  passportNumber: z.string().min(1, 'Passport number is required'),
+  passportIssueCountry: z.string().min(1, 'Passport country of issue is required'),
 });
 
 export const createBookingSchema = z.object({

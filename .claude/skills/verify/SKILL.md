@@ -39,6 +39,12 @@ flight on a real route (needs airlineId/aircraftId/routeId from a template row),
 
 ## Gotchas
 
+- Use a **unique Edge profile dir per run** (`edge-profile-${pid}`): killing the spawned PID tree
+  misses detached children, which keep the old profile locked ("Device or resource busy" on rm).
+- TaskStop on `npm run dev` leaves orphaned tsx/vite node children holding ports 5000/5173 and the
+  Prisma DLL. Sweep with: `Get-CimInstance Win32_Process -Filter "Name='node.exe'" | Where CommandLine
+  -like '*Plane-Ticket-Reservation*' | Stop-Process` before prisma generate or restarting servers.
+
 - PowerShell 5.1 quirks — prefer the Bash tool for node/curl one-liners.
 - Vite dev server takes ~10s; server ~15s (Prisma + NeonDB connect).
 - Local timezone is UTC+8; seeded flights span 14 days from seed time — at night nothing may be "in air".

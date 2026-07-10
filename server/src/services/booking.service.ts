@@ -85,12 +85,14 @@ export const bookingService = {
           passenger: {
             create: {
               userId,
+              title: p.title,
               firstName: p.firstName,
               lastName: p.lastName,
               dateOfBirth: p.dateOfBirth,
               gender: p.gender,
               nationality: p.nationality,
               passportNumber: p.passportNumber,
+              passportIssueCountry: p.passportIssueCountry,
             },
           },
           seat: { connect: { id: p.seatId } },

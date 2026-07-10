@@ -167,17 +167,19 @@ model Permission {
 // ─────────────────────── Passengers ──────────────────────────
 
 model Passenger {
-  id                  String    @id @default(cuid())
-  userId              String?
-  user                User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
-  firstName           String
-  lastName            String
-  dateOfBirth         DateTime
-  gender              Gender
-  nationality         String
-  passportNumber      String?
-  passportExpiry      DateTime?
-  frequentFlyerNumber String?
+  id                   String    @id @default(cuid())
+  userId               String?
+  user                 User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  title                String? // Mr. / Ms. / Mrs. / Dr. / Engr.
+  firstName            String
+  lastName             String
+  dateOfBirth          DateTime
+  gender               Gender
+  nationality          String
+  passportNumber       String?
+  passportIssueCountry String?
+  passportExpiry       DateTime?
+  frequentFlyerNumber  String?
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
 

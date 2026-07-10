@@ -18,7 +18,10 @@ const inputClass =
 
 const labelClass = 'block text-[11px] font-bold uppercase tracking-wide text-ink-soft mb-1.5';
 
+const TITLES = ['Mr.', 'Ms.', 'Mrs.', 'Dr.', 'Engr.'] as const;
+
 const passengerSchema = z.object({
+  title: z.enum(TITLES),
   firstName: z.string().min(1, 'First name is required'),
   lastName: z.string().min(1, 'Last name is required'),
   dateOfBirth: z
@@ -27,7 +30,8 @@ const passengerSchema = z.object({
     .refine((d) => new Date(d) < new Date(), 'Must be in the past'),
   gender: z.enum(['MALE', 'FEMALE', 'OTHER']),
   nationality: z.string().min(1, 'Nationality is required'),
-  passportNumber: z.string().optional(),
+  passportNumber: z.string().min(1, 'Passport number is required'),
+  passportIssueCountry: z.string().min(1, 'Country of issue is required'),
 });
 
 const schema = z.object({
@@ -37,6 +41,40 @@ const schema = z.object({
 });
 
 type FormValues = z.infer<typeof schema>;
+
+// Airline age brackets, measured on the day of the flight
+type AgeCategory = 'Adult' | 'Child' | 'Infant';
+
+const ageCategory = (dob: string, ref: Date): AgeCategory | null => {
+  if (!dob) return null;
+  const d = new Date(dob);
+  if (Number.isNaN(d.getTime()) || d > ref) return null;
+  let age = ref.getFullYear() - d.getFullYear();
+  const beforeBirthday =
+    ref.getMonth() < d.getMonth() ||
+    (ref.getMonth() === d.getMonth() && ref.getDate() < d.getDate());
+  if (beforeBirthday) age--;
+  if (age < 2) return 'Infant';
+  if (age <= 11) return 'Child';
+  return 'Adult';
+};
+
+const AGE_CHIP: Record<AgeCategory, string> = {
+  Adult: 'bg-brand-50 border-brand-200 text-brand-700',
+  Child: 'bg-sky-50 border-sky-200 text-sky-700',
+  Infant: 'bg-violet-50 border-violet-200 text-violet-700',
+};
+
+/** "2 Adults · 1 Child (2–11) · 1 Infant" from a list of categories. */
+const summarizeAges = (categories: (AgeCategory | null)[]) => {
+  const counts = { Adult: 0, Child: 0, Infant: 0 };
+  categories.forEach((c) => c && counts[c]++);
+  const parts: string[] = [];
+  if (counts.Adult) parts.push(`${counts.Adult} Adult${counts.Adult > 1 ? 's' : ''}`);
+  if (counts.Child) parts.push(`${counts.Child} Child${counts.Child > 1 ? 'ren' : ''} (2–11)`);
+  if (counts.Infant) parts.push(`${counts.Infant} Infant${counts.Infant > 1 ? 's' : ''} (under 2)`);
+  return parts.join(' · ');
+};
 
 const cabinBasePrice = (flight: Flight, cabin: SeatMapSeat['cabinClass']) => {
   if (cabin === 'BUSINESS' || cabin === 'FIRST') {
@@ -63,6 +101,7 @@ function PassengerForm({
   const {
     register,
     handleSubmit,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -70,18 +109,27 @@ function PassengerForm({
       contactEmail: user?.email ?? '',
       contactPhone: user?.phone ?? '',
       passengers: seats.map(() => ({
+        title: 'Mr.' as const,
         firstName: '',
         lastName: '',
         dateOfBirth: '',
         gender: 'MALE' as const,
         nationality: 'Philippines',
         passportNumber: '',
+        passportIssueCountry: 'Philippines',
       })),
     },
   });
 
   const fares = seats.map((s) => cabinBasePrice(flight, s.cabinClass) + Number(s.extraPrice));
   const total = fares.reduce((sum, f) => sum + f, 0);
+
+  // Live adult / child / infant classification as dates of birth are typed,
+  // measured against the departure date
+  const departure = new Date(flight.departureTime);
+  const watchedPassengers = watch('passengers');
+  const categories = watchedPassengers.map((p) => ageCategory(p.dateOfBirth, departure));
+  const ageSummary = summarizeAges(categories);
 
   const onSubmit = async (values: FormValues) => {
     setServerError(null);
@@ -92,12 +140,14 @@ function PassengerForm({
         contactPhone: values.contactPhone || undefined,
         passengers: values.passengers.map((p, i) => ({
           seatId: seats[i].id,
+          title: p.title,
           firstName: p.firstName,
           lastName: p.lastName,
           dateOfBirth: p.dateOfBirth,
           gender: p.gender,
           nationality: p.nationality,
-          passportNumber: p.passportNumber || undefined,
+          passportNumber: p.passportNumber,
+          passportIssueCountry: p.passportIssueCountry,
         })),
       });
       queryClient.invalidateQueries({ queryKey: ['seatmap', flightId] });
@@ -121,6 +171,28 @@ function PassengerForm({
         </div>
       )}
 
+      {/* Live party mix — updates as dates of birth are filled in */}
+      <div className="flex flex-wrap items-center gap-2 -mb-1">
+        <span className="inline-flex items-center px-3 py-1.5 rounded-full bg-white border border-slate-200 text-xs font-bold text-ink shadow-soft">
+          {seats.length} {seats.length === 1 ? 'passenger' : 'passengers'}
+        </span>
+        {(['Adult', 'Child', 'Infant'] as const).map((cat) => {
+          const count = categories.filter((c) => c === cat).length;
+          if (!count) return null;
+          return (
+            <span
+              key={cat}
+              className={`inline-flex items-center px-3 py-1.5 rounded-full border text-xs font-bold ${AGE_CHIP[cat]}`}
+            >
+              {count} {cat}
+              {count > 1 ? (cat === 'Child' ? 'ren' : 's') : ''}
+              {cat === 'Child' && ' (2–11)'}
+              {cat === 'Infant' && ' (under 2)'}
+            </span>
+          );
+        })}
+      </div>
+
       {seats.map((seat, i) => (
         <section
           key={seat.id}
@@ -137,9 +209,28 @@ function PassengerForm({
                 {seat.seatType.toLowerCase()} · ₱{fares[i].toLocaleString()}
               </p>
             </div>
+            {categories[i] && (
+              <span
+                className={`ml-auto inline-flex items-center px-2.5 py-1 rounded-full border text-[10px] font-bold uppercase tracking-wide ${AGE_CHIP[categories[i]!]}`}
+              >
+                {categories[i]}
+                {categories[i] === 'Child' && ' · 2–11'}
+                {categories[i] === 'Infant' && ' · <2'}
+              </span>
+            )}
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-[96px_1fr] sm:grid-cols-[96px_1fr_1fr] gap-4">
+            <div>
+              <label className={labelClass}>Title</label>
+              <select {...register(`passengers.${i}.title`)} className={inputClass}>
+                {TITLES.map((t) => (
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
+                ))}
+              </select>
+            </div>
             <div>
               <label className={labelClass}>First name</label>
               <input
@@ -153,7 +244,7 @@ function PassengerForm({
                 </p>
               )}
             </div>
-            <div>
+            <div className="col-span-2 sm:col-span-1">
               <label className={labelClass}>Last name</label>
               <input
                 {...register(`passengers.${i}.lastName`)}
@@ -166,6 +257,9 @@ function PassengerForm({
                 </p>
               )}
             </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
             <div>
               <label className={labelClass}>Date of birth</label>
               <input
@@ -188,6 +282,13 @@ function PassengerForm({
                 <option value="OTHER">Other</option>
               </select>
             </div>
+          </div>
+
+          <p className="mt-6 mb-3 flex items-center gap-3 text-[11px] font-bold uppercase tracking-[0.14em] text-ink-soft">
+            Travel documents
+            <span className="flex-1 border-t border-slate-100" />
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
               <label className={labelClass}>Nationality</label>
               <input
@@ -202,14 +303,30 @@ function PassengerForm({
               )}
             </div>
             <div>
-              <label className={labelClass}>
-                Passport number <span className="normal-case font-medium">(optional)</span>
-              </label>
+              <label className={labelClass}>Passport number</label>
               <input
                 {...register(`passengers.${i}.passportNumber`)}
                 className={inputClass}
                 placeholder="P1234567A"
               />
+              {errors.passengers?.[i]?.passportNumber && (
+                <p className="text-xs font-medium text-red-600 mt-1.5">
+                  {errors.passengers[i]?.passportNumber?.message}
+                </p>
+              )}
+            </div>
+            <div>
+              <label className={labelClass}>Country of issue</label>
+              <input
+                {...register(`passengers.${i}.passportIssueCountry`)}
+                className={inputClass}
+                placeholder="Philippines"
+              />
+              {errors.passengers?.[i]?.passportIssueCountry && (
+                <p className="text-xs font-medium text-red-600 mt-1.5">
+                  {errors.passengers[i]?.passportIssueCountry?.message}
+                </p>
+              )}
             </div>
           </div>
         </section>
@@ -245,21 +362,49 @@ function PassengerForm({
         </div>
       </section>
 
-      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-soft p-5 sm:p-6 flex flex-wrap items-center gap-5">
-        <div className="flex-1 min-w-0">
-          <p className="text-[10px] font-bold uppercase tracking-wide text-ink-soft">Total</p>
-          <p className="text-2xl font-extrabold tabular-nums">₱{total.toLocaleString()}</p>
-          <p className="text-xs font-medium text-ink-soft mt-0.5">
-            {seats.length} {seats.length === 1 ? 'passenger' : 'passengers'} · fares + seat fees
-          </p>
+      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-soft p-5 sm:p-6">
+        <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-ink-soft mb-3">
+          Fare summary
+        </p>
+        <ul className="space-y-1.5 mb-4">
+          {seats.map((seat, i) => (
+            <li
+              key={seat.id}
+              className="flex items-baseline justify-between gap-3 text-sm font-medium text-ink"
+            >
+              <span className="min-w-0 truncate">
+                Passenger {i + 1} · seat {seat.seatNumber}
+                <span className="text-ink-soft capitalize">
+                  {' '}
+                  · {seat.cabinClass === 'BUSINESS' ? 'business' : 'economy'}
+                  {categories[i] ? ` · ${categories[i]!.toLowerCase()}` : ''}
+                </span>
+              </span>
+              <span className="shrink-0 font-bold tabular-nums">
+                ₱{fares[i].toLocaleString()}
+              </span>
+            </li>
+          ))}
+        </ul>
+
+        <div className="flex flex-wrap items-center gap-5 pt-4 border-t border-dashed border-slate-200">
+          <div className="flex-1 min-w-0">
+            <p className="text-[10px] font-bold uppercase tracking-wide text-ink-soft">Total</p>
+            <p className="text-2xl font-extrabold tabular-nums">₱{total.toLocaleString()}</p>
+            <p className="text-xs font-medium text-ink-soft mt-0.5">
+              {ageSummary ||
+                `${seats.length} ${seats.length === 1 ? 'passenger' : 'passengers'}`}{' '}
+              · fares + seat fees · taxes included
+            </p>
+          </div>
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className="h-12 px-8 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-brand-600 to-violet-glow shadow-soft hover:shadow-lift hover:opacity-95 active:scale-[0.99] transition-all disabled:opacity-50"
+          >
+            {isSubmitting ? 'Booking…' : 'Confirm booking'}
+          </button>
         </div>
-        <button
-          type="submit"
-          disabled={isSubmitting}
-          className="h-12 px-8 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-brand-600 to-violet-glow shadow-soft hover:shadow-lift hover:opacity-95 active:scale-[0.99] transition-all disabled:opacity-50"
-        >
-          {isSubmitting ? 'Booking…' : 'Confirm booking'}
-        </button>
       </div>
     </form>
   );
