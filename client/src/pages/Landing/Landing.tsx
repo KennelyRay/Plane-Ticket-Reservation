@@ -262,8 +262,12 @@ export default function Landing() {
     queryFn: flightApi.airports,
     staleTime: Infinity,
   });
+  // Only airports with active operations belong on a live departures board
   const boardAirports = useMemo(
-    () => [...airports].sort((a, b) => a.city.localeCompare(b.city)),
+    () =>
+      airports
+        .filter((a) => a.isActive)
+        .sort((a, b) => a.city.localeCompare(b.city)),
     [airports]
   );
   const { data: departuresData, isPlaceholderData: boardSwitching } = useQuery({

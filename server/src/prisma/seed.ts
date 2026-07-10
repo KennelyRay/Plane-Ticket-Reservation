@@ -50,7 +50,8 @@ const AIRPORTS = [
   { name: 'Sanga-Sanga Airport', iataCode: 'TWT', icaoCode: 'RPMN', city: 'Tawi-Tawi (Bongao)', country: 'Philippines', timezone: 'Asia/Manila' },
   { name: 'Virac Airport', iataCode: 'VRC', icaoCode: 'RPUV', city: 'Virac (Catanduanes)', country: 'Philippines', timezone: 'Asia/Manila' },
   { name: 'Marinduque Airport', iataCode: 'MRQ', icaoCode: 'RPUW', city: 'Marinduque', country: 'Philippines', timezone: 'Asia/Manila' },
-  { name: 'Loakan Airport', iataCode: 'BAG', icaoCode: 'RPUB', city: 'Baguio', country: 'Philippines', timezone: 'Asia/Manila' },
+  // No commercial service at the moment — kept for data completeness but hidden from live views
+  { name: 'Loakan Airport', iataCode: 'BAG', icaoCode: 'RPUB', city: 'Baguio', country: 'Philippines', timezone: 'Asia/Manila', isActive: false },
   { name: 'Francisco B. Reyes Airport', iataCode: 'USU', icaoCode: 'RPVV', city: 'Coron (Busuanga)', country: 'Philippines', timezone: 'Asia/Manila' },
   { name: 'Evelio Javier Airport', iataCode: 'EUQ', icaoCode: 'RPVS', city: 'Antique (San Jose)', country: 'Philippines', timezone: 'Asia/Manila' },
   { name: 'El Nido Airport', iataCode: 'ENI', icaoCode: 'RPEN', city: 'El Nido', country: 'Philippines', timezone: 'Asia/Manila' },
@@ -272,11 +273,12 @@ async function main() {
   console.log('Seeding airports...');
   for (const airport of AIRPORTS) {
     const [latitude, longitude] = COORDS[airport.iataCode] ?? [undefined, undefined];
+    const isActive = (airport as { isActive?: boolean }).isActive ?? true;
     await prisma.airport.upsert({
       where: { iataCode: airport.iataCode },
-      // Re-running the seed backfills coordinates onto existing rows
-      update: { latitude, longitude },
-      create: { ...airport, latitude, longitude },
+      // Re-running the seed backfills coordinates and the active flag
+      update: { latitude, longitude, isActive },
+      create: { ...airport, latitude, longitude, isActive },
     });
   }
 

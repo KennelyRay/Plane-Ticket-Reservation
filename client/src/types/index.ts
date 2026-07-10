@@ -17,6 +17,7 @@ export interface Airport {
   timezone: string;
   latitude: number | null;
   longitude: number | null;
+  isActive: boolean;
 }
 
 export interface Airline {
