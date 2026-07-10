@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useAuthStore } from '../../features/auth/store';
@@ -77,83 +77,130 @@ function InFlightCard({ booking, now }: { booking: Booking; now: number }) {
     enabled: hasPath,
   });
 
+  // The map SVG lays out text and markers in absolute pixels, so it must be
+  // rendered at the card's true size rather than CSS-scaled from a fixed frame
+  const boxRef = useRef<HTMLDivElement>(null);
+  const [box, setBox] = useState({ w: 0, h: 0 });
+  useEffect(() => {
+    const el = boxRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => setBox({ w: el.clientWidth, h: el.clientHeight }));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  const chipClass =
+    'inline-flex items-center rounded-full bg-white/85 backdrop-blur-sm border border-slate-200/70 px-3 py-1.5 text-xs font-bold shadow-soft';
+
+  const liveBadge = (
+    <span className="inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.14em] text-emerald-700 bg-emerald-50/90 backdrop-blur-sm border border-emerald-200 rounded-full px-3 py-1.5 shadow-soft">
+      <span className="relative flex w-2 h-2">
+        <span className="absolute inline-flex w-full h-full rounded-full bg-emerald-400 opacity-75 animate-ping" />
+        <span className="relative inline-flex w-2 h-2 rounded-full bg-emerald-500" />
+      </span>
+      Live · in flight
+    </span>
+  );
+
+  const progressTrack = (
+    <div className="flex-1 min-w-0">
+      <div className="relative h-1.5 rounded-full bg-slate-200/80">
+        <div
+          className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-brand-600 to-violet-glow"
+          style={{ width: `${progress * 100}%` }}
+        />
+        <span
+          className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-7 h-7 rounded-full bg-white border border-brand-200 shadow-soft flex items-center justify-center"
+          style={{ left: `${progress * 100}%` }}
+        >
+          <PlaneIcon className="w-3.5 h-3.5 text-brand-600" />
+        </span>
+      </div>
+      <p className="text-center text-[11px] font-bold text-ink-soft mt-2.5 tabular-nums">
+        {Math.round(progress * 100)}% · {formatRemaining(arrival - now)}
+      </p>
+    </div>
+  );
+
   return (
     <Link
       to={`/bookings/${booking.id}`}
-      className="group block bg-white rounded-3xl border border-slate-200/80 shadow-soft hover:shadow-lift hover:border-brand-200 transition-all overflow-hidden animate-fade-up"
+      className="group block overflow-hidden rounded-3xl border border-slate-200/80 shadow-soft hover:shadow-lift hover:border-brand-200 transition-all animate-fade-up"
     >
-      <div className="p-5 sm:p-6 pb-4">
-        <div className="flex flex-wrap items-center gap-3 mb-4">
-          <span className="inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.14em] text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-3 py-1.5">
-            <span className="relative flex w-2 h-2">
-              <span className="absolute inline-flex w-full h-full rounded-full bg-emerald-400 opacity-75 animate-ping" />
-              <span className="relative inline-flex w-2 h-2 rounded-full bg-emerald-500" />
-            </span>
-            Live · in flight
-          </span>
-          <span className="text-xs font-semibold text-ink-soft">
-            {flight.airline.name} · {flight.flightNumber}
-          </span>
-          <span className="ml-auto text-xs font-bold text-brand-700 tabular-nums">
-            {booking.bookingReference}
-          </span>
-        </div>
-
-        <div className="flex items-center gap-4 sm:gap-6">
-          <div className="shrink-0">
-            <p className="text-2xl sm:text-3xl font-extrabold tracking-tight">
-              {route.originAirport.iataCode}
-            </p>
-            <p className="text-xs font-medium text-ink-soft truncate max-w-24">
-              {route.originAirport.city}
-            </p>
-            <p className="text-sm font-bold tabular-nums mt-0.5">
-              {formatTime(flight.departureTime)}
-            </p>
-          </div>
-
-          {/* Progress track */}
-          <div className="flex-1 min-w-0">
-            <div className="relative h-1.5 rounded-full bg-slate-100">
-              <div
-                className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-brand-600 to-violet-glow"
-                style={{ width: `${progress * 100}%` }}
-              />
-              <span
-                className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-7 h-7 rounded-full bg-white border border-brand-200 shadow-soft flex items-center justify-center"
-                style={{ left: `${progress * 100}%` }}
-              >
-                <PlaneIcon className="w-3.5 h-3.5 text-brand-600" />
-              </span>
-            </div>
-            <p className="text-center text-[11px] font-bold text-ink-soft mt-3 tabular-nums">
-              {Math.round(progress * 100)}% · {formatRemaining(arrival - now)}
-            </p>
-          </div>
-
-          <div className="shrink-0 text-right">
-            <p className="text-2xl sm:text-3xl font-extrabold tracking-tight">
-              {route.destinationAirport.iataCode}
-            </p>
-            <p className="text-xs font-medium text-ink-soft truncate max-w-24 ml-auto">
-              {route.destinationAirport.city}
-            </p>
-            <p className="text-sm font-bold tabular-nums mt-0.5">
-              {formatTime(flight.arrivalTime)}
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {hasPath && (
-        <div className="px-5 sm:px-6 pb-5 sm:pb-6">
-          <div className="[&_svg]:w-full [&_svg]:h-auto rounded-xl overflow-hidden border border-slate-200/70">
+      {hasPath ? (
+        /* The map is the card: full-bleed trajectory with the info overlaid */
+        <div ref={boxRef} className="relative h-80 sm:h-[26rem] bg-[#eaf3fe]">
+          {box.w > 0 && (
             <FlightPathMap
               airports={airports}
               origin={route.originAirport}
               destination={route.destinationAirport}
               progress={progress}
+              width={box.w}
+              height={box.h}
+              insetTop={56}
+              insetBottom={104}
             />
+          )}
+
+          <div className="absolute top-3 left-3 right-3 sm:top-4 sm:left-4 sm:right-4 flex flex-wrap items-center gap-2">
+            {liveBadge}
+            <span className={`${chipClass} text-ink-soft`}>
+              {flight.airline.name} · {flight.flightNumber}
+            </span>
+            <span className={`${chipClass} ml-auto text-brand-700 tabular-nums`}>
+              {booking.bookingReference}
+            </span>
+          </div>
+
+          <div className="absolute bottom-3 left-3 right-3 sm:bottom-4 sm:left-4 sm:right-4 rounded-2xl bg-white/90 backdrop-blur border border-white/70 shadow-lift px-4 py-3 sm:px-6 sm:py-4">
+            <div className="flex items-center gap-4 sm:gap-8">
+              <div className="shrink-0">
+                <p className="text-xl sm:text-2xl font-extrabold tracking-tight leading-none">
+                  {route.originAirport.iataCode}
+                </p>
+                <p className="text-[11px] font-bold text-ink-soft tabular-nums mt-1">
+                  {formatTime(flight.departureTime)}
+                </p>
+              </div>
+              {progressTrack}
+              <div className="shrink-0 text-right">
+                <p className="text-xl sm:text-2xl font-extrabold tracking-tight leading-none">
+                  {route.destinationAirport.iataCode}
+                </p>
+                <p className="text-[11px] font-bold text-ink-soft tabular-nums mt-1">
+                  {formatTime(flight.arrivalTime)}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : (
+        /* No coordinates on this route — fall back to the progress bar alone */
+        <div className="bg-white p-5 sm:p-6">
+          <div className="flex flex-wrap items-center gap-3 mb-4">
+            {liveBadge}
+            <span className="text-xs font-semibold text-ink-soft">
+              {flight.airline.name} · {flight.flightNumber}
+            </span>
+            <span className="ml-auto text-xs font-bold text-brand-700 tabular-nums">
+              {booking.bookingReference}
+            </span>
+          </div>
+          <div className="flex items-center gap-4 sm:gap-6">
+            <div className="shrink-0">
+              <p className="text-2xl font-extrabold tracking-tight">
+                {route.originAirport.iataCode}
+              </p>
+              <p className="text-sm font-bold tabular-nums">{formatTime(flight.departureTime)}</p>
+            </div>
+            {progressTrack}
+            <div className="shrink-0 text-right">
+              <p className="text-2xl font-extrabold tracking-tight">
+                {route.destinationAirport.iataCode}
+              </p>
+              <p className="text-sm font-bold tabular-nums">{formatTime(flight.arrivalTime)}</p>
+            </div>
           </div>
         </div>
       )}

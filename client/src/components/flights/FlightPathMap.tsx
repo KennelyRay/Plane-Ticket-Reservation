@@ -1,8 +1,8 @@
 import { useId, useMemo } from 'react';
 import type { Airport } from '../../types';
 
-const W = 420;
-const H = 260;
+const DEFAULT_W = 420;
+const DEFAULT_H = 260;
 const PAD = 36;
 
 // Simplified coastlines as [lat, lon] rings — rough by design, enough to
@@ -78,12 +78,24 @@ export default function FlightPathMap({
   origin,
   destination,
   progress,
+  width = DEFAULT_W,
+  height = DEFAULT_H,
+  insetTop = 0,
+  insetBottom = 0,
 }: {
   airports: Airport[];
   origin: Airport;
   destination: Airport;
   progress?: number;
+  width?: number;
+  height?: number;
+  /** Reserved bands (px) where overlays sit on top of the map — route,
+   *  markers, scale bar and north arrow are kept out of them. */
+  insetTop?: number;
+  insetBottom?: number;
 }) {
+  const W = width;
+  const H = height;
   const uid = useId();
   const seaId = `${uid}-sea`;
   const clipId = `${uid}-clip`;
@@ -108,7 +120,7 @@ export default function FlightPathMap({
     // Grow the short axis so degrees keep their true proportions on screen
     const cosMid = Math.cos((((minLat + maxLat) / 2) * Math.PI) / 180);
     const innerW = W - PAD * 2;
-    const innerH = H - PAD * 2;
+    const innerH = H - PAD * 2 - insetTop - insetBottom;
     const target = innerW / innerH;
     let spanLat = maxLat - minLat;
     let spanLon = maxLon - minLon;
@@ -125,9 +137,9 @@ export default function FlightPathMap({
     }
 
     const x = (lon: number) => PAD + ((lon - minLon) / spanLon) * innerW;
-    const y = (lat: number) => PAD + ((maxLat - lat) / spanLat) * innerH;
+    const y = (lat: number) => PAD + insetTop + ((maxLat - lat) / spanLat) * innerH;
     return { x, y, minLat, maxLat, minLon, maxLon, spanLat, innerH };
-  }, [origin, destination]);
+  }, [origin, destination, W, H, insetTop, insetBottom]);
 
   const lonSpan = view.maxLon - view.minLon;
   const gridStep = lonSpan > 20 ? 10 : lonSpan > 10 ? 5 : lonSpan > 5 ? 2 : 1;
@@ -257,8 +269,14 @@ export default function FlightPathMap({
           {destination.iataCode}
         </text>
 
-        {/* plane at the arc midpoint */}
+        {/* plane at the arc midpoint (or at `progress` along it) */}
         <g transform={`translate(${bx} ${by}) rotate(${angle})`}>
+          {progress != null && (
+            <circle r="9" fill="none" stroke="#2563eb" strokeWidth="1.5">
+              <animate attributeName="r" values="9;20" dur="2.4s" repeatCount="indefinite" />
+              <animate attributeName="stroke-opacity" values="0.55;0" dur="2.4s" repeatCount="indefinite" />
+            </circle>
+          )}
           <circle r="9" fill="#fff" stroke="#c0d4fc" strokeWidth="1" />
           <path
             transform="scale(0.55) translate(-12 -12)"
@@ -269,7 +287,7 @@ export default function FlightPathMap({
       </g>
 
       {/* scale bar */}
-      <g transform={`translate(14 ${H - 14})`}>
+      <g transform={`translate(14 ${H - 14 - insetBottom})`}>
         <line x1="0" y1="0" x2={scalePx} y2="0" stroke="#46546b" strokeWidth="1.5" />
         <line x1="0" y1="-3.5" x2="0" y2="3.5" stroke="#46546b" strokeWidth="1.5" />
         <line x1={scalePx} y1="-3.5" x2={scalePx} y2="3.5" stroke="#46546b" strokeWidth="1.5" />
@@ -279,7 +297,7 @@ export default function FlightPathMap({
       </g>
 
       {/* north indicator */}
-      <g transform={`translate(${W - 20} 24)`}>
+      <g transform={`translate(${W - 20} ${24 + insetTop})`}>
         <path d="M0 -9 L4 5 L0 2 L-4 5 Z" fill="#46546b" fillOpacity="0.75" />
         <text y="16" textAnchor="middle" fontSize="9" fontWeight="800" fill="#46546b">
           N

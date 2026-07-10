@@ -41,12 +41,20 @@ const HERO_PERKS = [
 ];
 
 type SortKey = 'departure' | 'price' | 'duration';
+type StatusKey = 'all' | 'upcoming' | 'boarding' | 'departed';
 type TripType = 'one' | 'round';
 
 const SORTS: { id: SortKey; label: string }[] = [
   { id: 'departure', label: 'Departure' },
   { id: 'price', label: 'Cheapest' },
   { id: 'duration', label: 'Fastest' },
+];
+
+const STATUSES: { id: StatusKey; label: string }[] = [
+  { id: 'all', label: 'All' },
+  { id: 'upcoming', label: 'Upcoming' },
+  { id: 'boarding', label: 'Boarding' },
+  { id: 'departed', label: 'Departed' },
 ];
 
 type Badge = 'cheapest' | 'fastest';
@@ -158,6 +166,12 @@ function FlightCard({
   const { route, airline } = flight;
   const hasPath =
     route.originAirport.latitude != null && route.destinationAirport.latitude != null;
+  // Boarding call is out but the flight hasn't left yet
+  const boarding =
+    !departed &&
+    flight.boardingTime != null &&
+    new Date(flight.boardingTime).getTime() <= Date.now() &&
+    new Date(flight.departureTime).getTime() > Date.now();
   // Flip the map popover under the card when the card sits too close to the
   // top of the viewport for it to fit above (measured as the hover starts).
   const [mapBelow, setMapBelow] = useState(false);
@@ -235,6 +249,15 @@ function FlightCard({
                 </span>
               ) : (
                 <>
+                  {boarding && (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-amber-200 bg-amber-50 text-[10px] font-bold uppercase tracking-wide text-amber-700">
+                      <span className="relative flex w-1.5 h-1.5">
+                        <span className="absolute inline-flex w-full h-full rounded-full bg-amber-400 opacity-75 animate-ping" />
+                        <span className="relative inline-flex w-1.5 h-1.5 rounded-full bg-amber-500" />
+                      </span>
+                      Boarding
+                    </span>
+                  )}
                   {badge && (
                     <span
                       className={`px-2.5 py-1 rounded-full border text-[10px] font-bold uppercase tracking-wide ${BADGES[badge].className}`}
@@ -384,6 +407,9 @@ export default function FlightSearch() {
     sort: (SORTS.some((s) => s.id === searchParams.get('sort'))
       ? searchParams.get('sort')
       : 'departure') as SortKey,
+    status: (STATUSES.some((s) => s.id === searchParams.get('status'))
+      ? searchParams.get('status')
+      : 'all') as StatusKey,
     page: Math.max(1, Number(searchParams.get('page')) || 1),
   };
 
@@ -426,19 +452,22 @@ export default function FlightSearch() {
   }, [airports, destinationMap, form.origin]);
 
   const { data, isLoading, isError, isPlaceholderData } = useQuery({
-    queryKey: ['flights', executed.origin, executed.destination, executed.date, executed.sort, executed.page],
+    queryKey: ['flights', executed.origin, executed.destination, executed.date, executed.status, executed.sort, executed.page],
     queryFn: () =>
       flightApi.search({
         origin: executed.origin || undefined,
         destination: executed.destination || undefined,
         date: executed.date || undefined,
+        status: executed.status === 'all' ? undefined : executed.status,
         sort: executed.sort,
         page: executed.page,
       }),
     placeholderData: keepPreviousData,
   });
 
-  const applySearch = (next: Partial<typeof form> & { sort?: SortKey; page?: number }) => {
+  const applySearch = (
+    next: Partial<typeof form> & { sort?: SortKey; status?: StatusKey; page?: number }
+  ) => {
     const merged = { ...form, ...next };
     setAirlineFilter(null);
     const params: Record<string, string> = {
@@ -448,6 +477,8 @@ export default function FlightSearch() {
       sort: next.sort ?? executed.sort,
       page: String(next.page ?? 1),
     };
+    const status = next.status ?? executed.status;
+    if (status !== 'all') params.status = status;
     if (merged.date) params.date = merged.date;
     if (merged.trip === 'round' && merged.returnDate) params.return = merged.returnDate;
     setSearchParams(params);
@@ -833,9 +864,17 @@ export default function FlightSearch() {
             <div className="mx-auto mb-4 w-16 h-16 rounded-2xl bg-brand-50 text-brand-600 flex items-center justify-center">
               <PlaneIcon className="w-8 h-8 -rotate-45" />
             </div>
-            <p className="text-lg font-bold text-ink">No flights on this route yet</p>
+            <p className="text-lg font-bold text-ink">
+              {executed.status === 'boarding'
+                ? 'No flights boarding right now'
+                : executed.status === 'departed'
+                  ? 'No departed flights to show'
+                  : 'No flights on this route yet'}
+            </p>
             <p className="text-sm text-ink-soft mt-1">
-              Try different airports or another date — popular routes always have seats.
+              {executed.status === 'boarding'
+                ? 'Boarding opens about 45 minutes before departure — check back soon.'
+                : 'Try different airports or another date — popular routes always have seats.'}
             </p>
             <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
               {POPULAR_ROUTES.slice(0, 4).map(([o, d, city]) => (
@@ -869,8 +908,30 @@ export default function FlightSearch() {
                 </h2>
                 <p className="text-xs font-semibold text-ink-soft">
                   {pagination?.total} flight{pagination?.total === 1 ? '' : 's'} ·{' '}
-                  {executed.date ? formatDate(executed.date) : 'all upcoming dates'}
+                  {executed.date
+                    ? formatDate(executed.date)
+                    : executed.status === 'departed'
+                      ? 'past departures'
+                      : executed.status === 'boarding'
+                        ? 'boarding now'
+                        : 'all upcoming dates'}
                 </p>
+              </div>
+
+              <div className="inline-flex rounded-xl border border-slate-200 bg-white p-1 shadow-soft">
+                {STATUSES.map((s) => (
+                  <button
+                    key={s.id}
+                    onClick={() => applySearch({ status: s.id })}
+                    className={`px-3.5 h-9 rounded-lg text-xs font-bold transition-colors ${
+                      executed.status === s.id
+                        ? 'bg-violet-glow text-white shadow-soft'
+                        : 'text-ink-soft hover:text-ink'
+                    }`}
+                  >
+                    {s.label}
+                  </button>
+                ))}
               </div>
 
               <div className="inline-flex rounded-xl border border-slate-200 bg-white p-1 shadow-soft">

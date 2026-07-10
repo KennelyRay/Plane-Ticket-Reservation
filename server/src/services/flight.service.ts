@@ -1,13 +1,19 @@
 import { ApiError } from '../utils/ApiError';
-import { flightRepository, FlightSortKey } from '../repositories/flight.repository';
+import {
+  flightRepository,
+  FlightSortKey,
+  FlightStatusFilter,
+} from '../repositories/flight.repository';
 
 const SORT_KEYS: FlightSortKey[] = ['departure', 'price', 'duration'];
+const STATUS_FILTERS: FlightStatusFilter[] = ['upcoming', 'boarding', 'departed'];
 
 export const flightService = {
   async search(query: {
     origin?: string;
     destination?: string;
     date?: string;
+    status?: string;
     sort?: string;
     page?: string;
     pageSize?: string;
@@ -17,6 +23,9 @@ export const flightService = {
     const sort = SORT_KEYS.includes(query.sort as FlightSortKey)
       ? (query.sort as FlightSortKey)
       : 'departure';
+    const status = STATUS_FILTERS.includes(query.status as FlightStatusFilter)
+      ? (query.status as FlightStatusFilter)
+      : undefined;
 
     const date = query.date ? new Date(query.date) : undefined;
     if (date && Number.isNaN(date.getTime())) {
@@ -27,6 +36,7 @@ export const flightService = {
       originIata: query.origin?.toUpperCase(),
       destinationIata: query.destination?.toUpperCase(),
       date,
+      status,
       sort,
       page,
       pageSize,
