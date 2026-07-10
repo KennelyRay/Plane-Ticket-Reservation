@@ -24,13 +24,111 @@ const METHODS: {
 
 const STEPS = ['Seats', 'Passengers', 'Payment'] as const;
 
-const formatCardNumber = (v: string) =>
-  v.replace(/\D/g, '').slice(0, 19).replace(/(\d{4})(?=\d)/g, '$1 ');
+// ── Card brand detection ─────────────────────────────────────
+// Detected from the leading digits (IIN ranges). Bank-issued cards (BPI,
+// BDO, …) surface as the network they run on — Visa or Mastercard.
+
+type CardBrandId =
+  | 'visa'
+  | 'mastercard'
+  | 'amex'
+  | 'jcb'
+  | 'discover'
+  | 'diners'
+  | 'unionpay';
+
+const CARD_BRANDS: {
+  id: CardBrandId;
+  name: string;
+  match: RegExp;
+  /** digit grouping on the card face */
+  groups: number[];
+  /** radial accents behind the preview card */
+  glow: [string, string];
+}[] = [
+  { id: 'visa', name: 'Visa', match: /^4/, groups: [4, 4, 4, 4], glow: ['rgb(37 99 235 / 0.7)', 'rgb(14 165 233 / 0.55)'] },
+  { id: 'mastercard', name: 'Mastercard', match: /^(5[1-5]|2[3-6]|22[2-9]|27[01]|2720)/, groups: [4, 4, 4, 4], glow: ['rgb(234 88 12 / 0.6)', 'rgb(220 38 38 / 0.5)'] },
+  { id: 'amex', name: 'Amex', match: /^3[47]/, groups: [4, 6, 5], glow: ['rgb(13 148 136 / 0.6)', 'rgb(37 99 235 / 0.5)'] },
+  { id: 'jcb', name: 'JCB', match: /^35(2[89]|[3-8])/, groups: [4, 4, 4, 4], glow: ['rgb(22 163 74 / 0.55)', 'rgb(37 99 235 / 0.5)'] },
+  { id: 'discover', name: 'Discover', match: /^(6011|64[4-9]|65)/, groups: [4, 4, 4, 4], glow: ['rgb(249 115 22 / 0.6)', 'rgb(120 113 108 / 0.5)'] },
+  { id: 'diners', name: 'Diners Club', match: /^3(0[0-5]|[689])/, groups: [4, 6, 4], glow: ['rgb(100 116 139 / 0.6)', 'rgb(37 99 235 / 0.5)'] },
+  { id: 'unionpay', name: 'UnionPay', match: /^62/, groups: [4, 4, 4, 4], glow: ['rgb(220 38 38 / 0.55)', 'rgb(13 148 136 / 0.5)'] },
+];
+
+const detectBrand = (value: string) => {
+  const digits = value.replace(/\D/g, '');
+  return digits ? CARD_BRANDS.find((b) => b.match.test(digits)) ?? null : null;
+};
+
+/** Group digits per brand (Amex 4-6-5, Diners 4-6-4, default 4-4-4-4…). */
+const groupDigits = (digits: string, groups: number[]) => {
+  const out: string[] = [];
+  let at = 0;
+  for (const size of groups) {
+    if (at >= digits.length) break;
+    out.push(digits.slice(at, at + size));
+    at += size;
+  }
+  // anything beyond the pattern (long Visa PANs) keeps flowing in 4s
+  while (at < digits.length) {
+    out.push(digits.slice(at, at + 4));
+    at += 4;
+  }
+  return out;
+};
+
+const formatCardNumber = (v: string) => {
+  const digits = v.replace(/\D/g, '').slice(0, 19);
+  const brand = detectBrand(digits);
+  return groupDigits(digits, brand?.groups ?? [4, 4, 4, 4]).join(' ');
+};
 
 const formatExpiry = (v: string) => {
   const digits = v.replace(/\D/g, '').slice(0, 4);
   return digits.length > 2 ? `${digits.slice(0, 2)}/${digits.slice(2)}` : digits;
 };
+
+/** Brand mark drawn with CSS — enough to be recognizable at card size. */
+function BrandLogo({ brand }: { brand: CardBrandId | null }) {
+  switch (brand) {
+    case 'visa':
+      return <span className="text-xl font-black italic tracking-tighter text-white">VISA</span>;
+    case 'mastercard':
+      return (
+        <span className="flex items-center">
+          <span className="w-6 h-6 rounded-full bg-red-500" />
+          <span className="w-6 h-6 rounded-full bg-amber-400/90 -ml-2.5 mix-blend-plus-lighter" />
+        </span>
+      );
+    case 'amex':
+      return (
+        <span className="px-2 py-1 rounded-md bg-sky-500/25 border border-sky-200/50 text-[11px] font-black tracking-[0.18em] text-sky-100">
+          AMEX
+        </span>
+      );
+    case 'jcb':
+      return (
+        <span className="flex items-center gap-0.5">
+          <span className="w-2 h-6 rounded-sm bg-blue-500" />
+          <span className="w-2 h-6 rounded-sm bg-red-500" />
+          <span className="w-2 h-6 rounded-sm bg-emerald-500" />
+          <span className="ml-1.5 text-sm font-black tracking-wide text-white">JCB</span>
+        </span>
+      );
+    case 'discover':
+      return (
+        <span className="flex items-center gap-1.5 text-[11px] font-black tracking-[0.14em] text-white">
+          DISC<span className="w-3.5 h-3.5 rounded-full bg-orange-500 -mx-0.5" />VER
+        </span>
+      );
+    case 'diners':
+      return <span className="text-[11px] font-black tracking-[0.12em] text-white">DINERS CLUB</span>;
+    case 'unionpay':
+      return <span className="text-sm font-black tracking-wide text-white">UnionPay</span>;
+    default:
+      return <CardIcon className="w-6 h-6 text-white/80" />;
+  }
+}
 
 const formatTime = (iso: string) =>
   new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -38,26 +136,30 @@ const formatTime = (iso: string) =>
 const formatDate = (iso: string) =>
   new Date(iso).toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
 
-/** Live preview of the card being typed — purely decorative. */
+/** Live preview of the card being typed — brand mark, digit grouping and
+ *  glow all follow the detected network. Purely decorative. */
 function CardPreview({ holder, number, expiry }: { holder: string; number: string; expiry: string }) {
-  const groups =
-    number.replace(/\D/g, '').padEnd(16, '•').match(/.{1,4}/g)?.slice(0, 4) ?? [];
+  const brand = detectBrand(number);
+  const groups = brand?.groups ?? [4, 4, 4, 4];
+  const panLength = groups.reduce((sum, g) => sum + g, 0);
+  const digits = number.replace(/\D/g, '');
+  const shown = groupDigits(digits.padEnd(panLength, '•'), groups);
+  const [glowA, glowB] = brand?.glow ?? ['rgb(124 58 237 / 0.65)', 'rgb(37 99 235 / 0.6)'];
   return (
-    <div className="relative overflow-hidden rounded-2xl bg-brand-950 text-white p-5 shadow-lift max-w-sm">
+    <div className="relative overflow-hidden rounded-2xl bg-brand-950 text-white p-5 shadow-lift max-w-sm transition-colors">
       <div
-        className="pointer-events-none absolute inset-0"
+        className="pointer-events-none absolute inset-0 transition-all duration-500"
         style={{
-          background:
-            'radial-gradient(280px 160px at 90% -20%, rgb(124 58 237 / 0.65), transparent 65%), radial-gradient(300px 170px at 0% 120%, rgb(37 99 235 / 0.6), transparent 65%)',
+          background: `radial-gradient(280px 160px at 90% -20%, ${glowA}, transparent 65%), radial-gradient(300px 170px at 0% 120%, ${glowB}, transparent 65%)`,
         }}
       />
       <div className="relative">
-        <div className="flex items-center justify-between mb-7">
+        <div className="flex items-center justify-between mb-7 h-7">
           <span className="w-9 h-7 rounded-md bg-gradient-to-br from-amber-200 to-amber-400" />
-          <CardIcon className="w-6 h-6 text-white/80" />
+          <BrandLogo brand={brand?.id ?? null} />
         </div>
         <p className="font-mono text-lg tracking-[0.14em] tabular-nums whitespace-nowrap">
-          {groups.map((g, i) => (
+          {shown.map((g, i) => (
             <span key={i} className={`${i > 0 ? 'ml-3' : ''} ${/\d/.test(g) ? '' : 'text-white/40'}`}>
               {g}
             </span>
@@ -252,14 +354,21 @@ export default function Payment() {
                 </div>
                 <div className="sm:col-span-2">
                   <label className={labelClass}>Card number</label>
-                  <input
-                    value={card.number}
-                    onChange={(e) => setCard({ ...card, number: formatCardNumber(e.target.value) })}
-                    className={`${inputClass} font-mono tabular-nums`}
-                    placeholder="4242 4242 4242 4242"
-                    inputMode="numeric"
-                    autoComplete="cc-number"
-                  />
+                  <div className="relative">
+                    <input
+                      value={card.number}
+                      onChange={(e) => setCard({ ...card, number: formatCardNumber(e.target.value) })}
+                      className={`${inputClass} font-mono tabular-nums pr-24`}
+                      placeholder="4242 4242 4242 4242"
+                      inputMode="numeric"
+                      autoComplete="cc-number"
+                    />
+                    {detectBrand(card.number) && (
+                      <span className="absolute right-2.5 top-1/2 -translate-y-1/2 px-2 py-1 rounded-md bg-brand-50 border border-brand-100 text-[10px] font-bold text-brand-700 animate-fade-in">
+                        {detectBrand(card.number)!.name}
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <div>
                   <label className={labelClass}>Expiry</label>

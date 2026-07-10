@@ -7,6 +7,7 @@ import { z } from 'zod';
 import { isAxiosError } from 'axios';
 import { seatApi, type SeatMapSeat } from '../../features/seat/api';
 import { bookingApi } from '../../features/booking/api';
+import { COUNTRIES } from '../../features/booking/countries';
 import { useSeatSocket } from '../../hooks/useSeatSocket';
 import { useAuthStore } from '../../features/auth/store';
 import LockCountdown from '../../components/booking/LockCountdown';
@@ -114,7 +115,7 @@ function PassengerForm({
         lastName: '',
         dateOfBirth: '',
         gender: 'MALE' as const,
-        nationality: 'Philippines',
+        nationality: 'Filipino',
         passportNumber: '',
         passportIssueCountry: 'Philippines',
       })),
@@ -291,11 +292,13 @@ function PassengerForm({
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
               <label className={labelClass}>Nationality</label>
-              <input
-                {...register(`passengers.${i}.nationality`)}
-                className={inputClass}
-                placeholder="Philippines"
-              />
+              <select {...register(`passengers.${i}.nationality`)} className={inputClass}>
+                {COUNTRIES.map((c) => (
+                  <option key={c.nationality} value={c.nationality}>
+                    {c.nationality}
+                  </option>
+                ))}
+              </select>
               {errors.passengers?.[i]?.nationality && (
                 <p className="text-xs font-medium text-red-600 mt-1.5">
                   {errors.passengers[i]?.nationality?.message}
@@ -317,11 +320,13 @@ function PassengerForm({
             </div>
             <div>
               <label className={labelClass}>Country of issue</label>
-              <input
-                {...register(`passengers.${i}.passportIssueCountry`)}
-                className={inputClass}
-                placeholder="Philippines"
-              />
+              <select {...register(`passengers.${i}.passportIssueCountry`)} className={inputClass}>
+                {COUNTRIES.map((c) => (
+                  <option key={c.country} value={c.country}>
+                    {c.country}
+                  </option>
+                ))}
+              </select>
               {errors.passengers?.[i]?.passportIssueCountry && (
                 <p className="text-xs font-medium text-red-600 mt-1.5">
                   {errors.passengers[i]?.passportIssueCountry?.message}
