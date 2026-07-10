@@ -119,7 +119,9 @@ export default function Landing() {
   return (
     <div className="space-y-14 sm:space-y-20">
       {/* ── Hero — rotating destination showcase ─────────────── */}
-      <section className="relative overflow-hidden rounded-[1.75rem] sm:rounded-[2rem] shadow-lift min-h-[480px] sm:min-h-[560px] lg:min-h-[620px] flex flex-col">
+      {/* Full-bleed: breaks out of the page container to span the viewport,
+          and -mt-8 pulls it flush under the sticky header */}
+      <section className="relative overflow-hidden w-screen left-1/2 -translate-x-1/2 -mt-8 min-h-[520px] sm:min-h-[600px] lg:min-h-[660px] flex flex-col">
         {HERO_SLIDES.map((s, i) => (
           <img
             key={s.code}

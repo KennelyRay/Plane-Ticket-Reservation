@@ -70,7 +70,10 @@ export default function MainLayout() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col">
+    // overflow-x-clip: full-bleed sections use w-screen (100vw), which is a
+    // scrollbar-width wider than the body — clip that sliver instead of
+    // growing a horizontal scrollbar
+    <div className="min-h-screen flex flex-col overflow-x-clip">
       <BackgroundScene />
       <header className="sticky top-0 z-20 bg-white/80 backdrop-blur-xl border-b border-slate-200/70">
         <div className="max-w-[84rem] mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
