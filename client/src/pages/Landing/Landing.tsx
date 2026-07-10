@@ -1,6 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { useAuthStore } from '../../features/auth/store';
+import { flightApi } from '../../features/flight/api';
+import { useNow } from '../../hooks/useNow';
+import type { Flight } from '../../types';
 import { DESTINATION_IMAGES } from '../../components/flights/destinationImages';
 import {
   CheckInIcon,
@@ -32,21 +36,25 @@ const HERO_SLIDES = [
 
 const SLIDE_MS = 5000;
 
-// Split-flap departures board — a signature airport touch.
-const DEPARTURES = [
-  { flight: 'PR 101', code: 'CEB', city: 'Cebu', time: '06:00', gate: '12', status: 'Boarding' },
-  { flight: 'PR 181', code: 'NRT', city: 'Tokyo', time: '06:00', gate: '07', status: 'On time' },
-  { flight: '5J 221', code: 'DVO', city: 'Davao', time: '06:20', gate: '03', status: 'On time' },
-  { flight: 'PR 261', code: 'TAG', city: 'Bohol', time: '06:35', gate: '15', status: 'Delayed' },
-  { flight: '5J 517', code: 'MPH', city: 'Caticlan', time: '06:50', gate: '09', status: 'On time' },
-  { flight: 'PR 431', code: 'SIN', city: 'Singapore', time: '07:10', gate: '21', status: 'On time' },
-];
-
 const statusTone: Record<string, string> = {
   'On time': 'text-emerald-300',
   Boarding: 'text-sky-300',
   Delayed: 'text-amber-300',
   Departed: 'text-white/40',
+};
+
+const formatBoardTime = (iso: string) =>
+  new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+
+// "PR101" → "PR 101" for the split-flap look
+const formatFlightNo = (n: string) => `${n.slice(0, 2)} ${n.slice(2)}`;
+
+/** Board status derived from the flight's own status and clock. */
+const boardStatus = (f: Flight, now: number) => {
+  if (f.status === 'DELAYED') return 'Delayed';
+  if (new Date(f.departureTime).getTime() <= now) return 'Departed';
+  if (f.boardingTime && new Date(f.boardingTime).getTime() <= now) return 'Boarding';
+  return 'On time';
 };
 
 // First entry is the featured (large) bento tile.
@@ -115,6 +123,16 @@ export default function Landing() {
   }, [slide]);
 
   const active = HERO_SLIDES[slide];
+
+  // Live departures out of Manila: refetched every 30s, statuses re-derived
+  // every 30s in between so Boarding/Departed roll over on time.
+  const now = useNow(30_000);
+  const { data: departuresData } = useQuery({
+    queryKey: ['landing-departures'],
+    queryFn: () => flightApi.search({ origin: 'MNL', sort: 'departure', page: 1, pageSize: 6 }),
+    refetchInterval: 30_000,
+  });
+  const departures = departuresData?.flights ?? [];
 
   return (
     <div className="space-y-14 sm:space-y-20">
@@ -239,32 +257,46 @@ export default function Landing() {
           </div>
 
           <ul className="divide-y divide-white/5 flex-1">
-            {DEPARTURES.map((d) => (
-              <li
-                key={d.flight}
-                className="grid grid-cols-[auto_1fr_auto] sm:grid-cols-[100px_1fr_80px_60px_100px] items-center gap-3 sm:gap-4 px-5 sm:px-7 py-3.5 hover:bg-white/[0.03] transition-colors"
-              >
-                <span className="font-mono font-bold text-amber-300 tabular-nums text-sm">
-                  {d.flight}
-                </span>
-                <span className="min-w-0">
-                  <span className="font-extrabold tracking-tight truncate block">{d.city}</span>
-                  <span className="text-[11px] font-semibold text-white/45 sm:hidden">
-                    {d.code} · {d.time} · Gate {d.gate}
+            {departures.length === 0 &&
+              Array.from({ length: 6 }).map((_, i) => (
+                <li key={i} className="px-5 sm:px-7 py-[1.15rem] animate-pulse">
+                  <span className="block h-4 rounded bg-white/10" style={{ width: `${55 + (i % 3) * 12}%` }} />
+                </li>
+              ))}
+            {departures.map((f) => {
+              const status = boardStatus(f, now);
+              return (
+                <li
+                  key={f.id}
+                  className="grid grid-cols-[auto_1fr_auto] sm:grid-cols-[100px_1fr_80px_60px_100px] items-center gap-3 sm:gap-4 px-5 sm:px-7 py-3.5 hover:bg-white/[0.03] transition-colors"
+                >
+                  <span className="font-mono font-bold text-amber-300 tabular-nums text-sm">
+                    {formatFlightNo(f.flightNumber)}
                   </span>
-                  <span className="hidden sm:block text-[11px] font-semibold text-white/45">
-                    {d.code}
+                  <span className="min-w-0">
+                    <span className="font-extrabold tracking-tight truncate block">
+                      {f.route.destinationAirport.city}
+                    </span>
+                    <span className="text-[11px] font-semibold text-white/45 sm:hidden">
+                      {f.route.destinationAirport.iataCode} · {formatBoardTime(f.departureTime)} ·
+                      Gate {f.gate ?? '—'}
+                    </span>
+                    <span className="hidden sm:block text-[11px] font-semibold text-white/45">
+                      {f.route.destinationAirport.iataCode}
+                    </span>
                   </span>
-                </span>
-                <span className="hidden sm:block font-mono tabular-nums font-bold text-white/90">
-                  {d.time}
-                </span>
-                <span className="hidden sm:block font-mono tabular-nums text-white/60">{d.gate}</span>
-                <span className={`text-right text-xs font-bold ${statusTone[d.status] ?? 'text-white/60'}`}>
-                  {d.status}
-                </span>
-              </li>
-            ))}
+                  <span className="hidden sm:block font-mono tabular-nums font-bold text-white/90">
+                    {formatBoardTime(f.departureTime)}
+                  </span>
+                  <span className="hidden sm:block font-mono tabular-nums text-white/60">
+                    {f.gate ?? '—'}
+                  </span>
+                  <span className={`text-right text-xs font-bold ${statusTone[status] ?? 'text-white/60'}`}>
+                    {status}
+                  </span>
+                </li>
+              );
+            })}
           </ul>
         </div>
 

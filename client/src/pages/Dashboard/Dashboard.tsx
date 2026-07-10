@@ -3,8 +3,9 @@ import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useAuthStore } from '../../features/auth/store';
 import { bookingApi, type Booking } from '../../features/booking/api';
+import { bookingDisplayStatus } from '../../features/booking/status';
 import { flightApi } from '../../features/flight/api';
-import { statusChip } from '../Booking/BookingDetail';
+import { useNow } from '../../hooks/useNow';
 import FlightPathMap from '../../components/flights/FlightPathMap';
 import { CheckInIcon, GlobeIcon, PlaneIcon, SearchIcon, TicketIcon } from '../../components/ui/icons';
 
@@ -40,16 +41,6 @@ const isInFlight = (b: Booking, now: number) =>
   (b.status === 'CONFIRMED' || b.status === 'COMPLETED') &&
   new Date(b.flight.departureTime).getTime() <= now &&
   new Date(b.flight.arrivalTime).getTime() > now;
-
-/** Re-renders on an interval so in-flight progress keeps moving. */
-function useNow(intervalMs: number) {
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), intervalMs);
-    return () => clearInterval(id);
-  }, [intervalMs]);
-  return now;
-}
 
 const formatRemaining = (ms: number) => {
   const minutes = Math.max(0, Math.round(ms / 60_000));
@@ -475,9 +466,9 @@ export default function Dashboard() {
                     ₱{Number(b.totalAmount).toLocaleString()}
                   </span>
                   <span
-                    className={`px-2.5 py-1 rounded-full border text-[11px] font-bold capitalize ${statusChip[b.status]}`}
+                    className={`px-2.5 py-1 rounded-full border text-[11px] font-bold ${bookingDisplayStatus(b, now).className}`}
                   >
-                    {b.status.toLowerCase()}
+                    {bookingDisplayStatus(b, now).label}
                   </span>
                 </Link>
               </li>

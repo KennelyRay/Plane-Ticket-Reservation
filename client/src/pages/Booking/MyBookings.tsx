@@ -1,7 +1,8 @@
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { bookingApi } from '../../features/booking/api';
-import { statusChip } from './BookingDetail';
+import { bookingDisplayStatus } from '../../features/booking/status';
+import { useNow } from '../../hooks/useNow';
 import { AlertIcon, LuggageIcon, PlaneIcon } from '../../components/ui/icons';
 
 const formatTime = (iso: string) =>
@@ -15,6 +16,9 @@ export default function MyBookings() {
     queryKey: ['bookings'],
     queryFn: bookingApi.listMine,
   });
+
+  // Chips roll Boarding → In flight → Completed while the page sits open
+  const now = useNow(30_000);
 
   if (isLoading)
     return (
@@ -59,7 +63,9 @@ export default function MyBookings() {
         </div>
       ) : (
         <ul className="space-y-4">
-          {bookings.map((booking) => (
+          {bookings.map((booking) => {
+            const status = bookingDisplayStatus(booking, now);
+            return (
             <li key={booking.id}>
               <Link
                 to={`/bookings/${booking.id}`}
@@ -76,9 +82,9 @@ export default function MyBookings() {
                         {booking.flight.route.destinationAirport.city}
                       </p>
                       <span
-                        className={`shrink-0 px-2.5 py-1 rounded-full border text-[11px] font-bold capitalize ${statusChip[booking.status]}`}
+                        className={`shrink-0 px-2.5 py-1 rounded-full border text-[11px] font-bold ${status.className}`}
                       >
-                        {booking.status.toLowerCase()}
+                        {status.label}
                       </span>
                     </div>
                     <p className="text-xs font-semibold text-ink-soft mt-0.5 truncate">
@@ -100,7 +106,8 @@ export default function MyBookings() {
                 </div>
               </Link>
             </li>
-          ))}
+            );
+          })}
         </ul>
       )}
     </div>
