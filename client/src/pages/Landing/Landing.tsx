@@ -1,13 +1,15 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { useAuthStore } from '../../features/auth/store';
 import { flightApi } from '../../features/flight/api';
 import { useNow } from '../../hooks/useNow';
-import type { Flight } from '../../types';
+import type { Airport, Flight } from '../../types';
 import { DESTINATION_IMAGES } from '../../components/flights/destinationImages';
 import {
+  CheckIcon,
   CheckInIcon,
+  ChevronDownIcon,
   ClockIcon,
   PlaneIcon,
   SearchIcon,
@@ -56,6 +58,132 @@ const boardStatus = (f: Flight, now: number) => {
   if (f.boardingTime && new Date(f.boardingTime).getTime() <= now) return 'Boarding';
   return 'On time';
 };
+
+/**
+ * Airport picker styled for the dark departures board: the trigger reads as
+ * the board's title, the panel is a searchable dark list.
+ */
+function BoardAirportPicker({
+  airports,
+  value,
+  onChange,
+}: {
+  airports: Airport[];
+  value: string;
+  onChange: (iataCode: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const boxRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const selected = airports.find((a) => a.iataCode === value);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: MouseEvent) => {
+      if (!boxRef.current?.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false);
+    };
+    document.addEventListener('mousedown', onDown);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDown);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [open]);
+
+  useEffect(() => {
+    if (open) {
+      setQuery('');
+      inputRef.current?.focus();
+    }
+  }, [open]);
+
+  const q = query.trim().toLowerCase();
+  const filtered = q
+    ? airports.filter(
+        (a) =>
+          a.iataCode.toLowerCase().includes(q) ||
+          a.city.toLowerCase().includes(q) ||
+          a.name.toLowerCase().includes(q) ||
+          a.country.toLowerCase().includes(q)
+      )
+    : airports;
+
+  return (
+    <div ref={boxRef} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        aria-label="Choose departure airport"
+        className="group inline-flex items-center gap-1.5 font-extrabold tracking-tight text-white rounded-lg -mx-1 px-1 hover:text-brand-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30 transition-colors"
+      >
+        {selected ? `${selected.city} · ${selected.iataCode}` : value}
+        <ChevronDownIcon
+          className={`w-3.5 h-3.5 text-white/50 group-hover:text-brand-200 transition-transform ${
+            open ? 'rotate-180' : ''
+          }`}
+        />
+      </button>
+      <p className="text-[11px] font-semibold text-white/45 truncate max-w-56">
+        {selected?.name ?? '—'}
+      </p>
+
+      {open && (
+        <div className="absolute left-0 top-full mt-2 z-30 w-80 max-w-[80vw] rounded-2xl bg-[#111d33] border border-white/10 shadow-lift animate-fade-in">
+          <div className="p-2 border-b border-white/10">
+            <input
+              ref={inputRef}
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search city, code or airport"
+              aria-label="Search airports"
+              className="w-full h-9 px-3 rounded-lg bg-white/5 border border-white/10 text-sm font-semibold text-white placeholder:text-white/30 focus:outline-none focus:border-brand-400/60 focus:ring-2 focus:ring-brand-500/30"
+            />
+          </div>
+          <ul className="max-h-72 overflow-auto py-1.5">
+            {filtered.length === 0 && (
+              <li className="px-4 py-6 text-center text-xs font-semibold text-white/40">
+                No matching airports
+              </li>
+            )}
+            {filtered.map((a) => (
+              <li key={a.id}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    onChange(a.iataCode);
+                    setOpen(false);
+                  }}
+                  className={`w-full px-3 py-2 flex items-center gap-2.5 text-left transition-colors hover:bg-white/[0.06] ${
+                    a.iataCode === value ? 'bg-white/[0.08]' : ''
+                  }`}
+                >
+                  <span className="w-11 py-1 rounded-lg bg-white/10 text-center text-[11px] font-extrabold text-amber-300 shrink-0">
+                    {a.iataCode}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-sm font-bold text-white truncate">{a.city}</span>
+                    <span className="block text-[11px] font-medium text-white/40 truncate">
+                      {a.name}
+                    </span>
+                  </span>
+                  {a.iataCode === value && (
+                    <CheckIcon className="w-3.5 h-3.5 text-emerald-300 shrink-0" />
+                  )}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
 
 // First entry is the featured (large) bento tile.
 const DESTINATIONS = [
@@ -243,7 +371,9 @@ export default function Landing() {
 
       {/* ── Departures board + why-fly panel (asymmetric) ────── */}
       <section className="grid grid-cols-1 lg:grid-cols-[1.55fr_1fr] gap-5 lg:gap-6 items-stretch">
-        <div className="relative overflow-hidden rounded-3xl bg-[#0b1220] text-white shadow-lift border border-white/10 flex flex-col">
+        {/* No overflow-hidden here — the airport picker's panel hangs below
+            the header; the list rounds its own bottom corners instead */}
+        <div className="relative rounded-3xl bg-[#0b1220] text-white shadow-lift border border-white/10 flex flex-col">
           <div className="flex items-center justify-between gap-3 px-5 sm:px-7 py-5 border-b border-white/10">
             <div className="flex items-center gap-3">
               <span className="w-9 h-9 rounded-lg bg-amber-400/15 border border-amber-300/30 flex items-center justify-center">
@@ -253,32 +383,11 @@ export default function Landing() {
                 <p className="text-[11px] uppercase tracking-[0.22em] text-white/50 font-bold">
                   Departures
                 </p>
-                {/* Airport picker — restyled native select so the board stays a board */}
-                <div className="relative inline-flex items-center">
-                  <select
-                    value={boardOrigin}
-                    onChange={(e) => setBoardOrigin(e.target.value)}
-                    aria-label="Choose departure airport"
-                    className="appearance-none bg-transparent font-extrabold tracking-tight text-white pr-5 cursor-pointer rounded focus:outline-none focus:ring-2 focus:ring-white/30 [&>option]:text-ink [&>option]:font-semibold"
-                  >
-                    {(boardAirports.length
-                      ? boardAirports
-                      : [{ id: 'mnl', iataCode: 'MNL', city: 'Manila' }]
-                    ).map((a) => (
-                      <option key={a.iataCode} value={a.iataCode}>
-                        {a.city} · {a.iataCode}
-                      </option>
-                    ))}
-                  </select>
-                  <span aria-hidden className="pointer-events-none absolute right-0 text-white/50 text-[10px]">
-                    ▼
-                  </span>
-                </div>
-                {boardAirport && (
-                  <p className="text-[11px] font-semibold text-white/45 truncate max-w-56">
-                    {boardAirport.name}
-                  </p>
-                )}
+                <BoardAirportPicker
+                  airports={boardAirports}
+                  value={boardOrigin}
+                  onChange={setBoardOrigin}
+                />
               </div>
             </div>
             <span className="inline-flex items-center gap-2 text-[11px] font-bold text-emerald-300">
@@ -295,7 +404,7 @@ export default function Landing() {
             <span className="text-right">Status</span>
           </div>
 
-          <ul className={`divide-y divide-white/5 flex-1 transition-opacity ${boardSwitching ? 'opacity-50' : ''}`}>
+          <ul className={`divide-y divide-white/5 flex-1 rounded-b-3xl overflow-hidden transition-opacity ${boardSwitching ? 'opacity-50' : ''}`}>
             {!departuresData &&
               Array.from({ length: 6 }).map((_, i) => (
                 <li key={i} className="px-5 sm:px-7 py-[1.15rem] animate-pulse">
