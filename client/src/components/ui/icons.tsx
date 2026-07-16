@@ -170,6 +170,22 @@ export const PrinterIcon = ({ className = 'w-5 h-5' }: IconProps) => (
   </svg>
 );
 
+export const EyeIcon = ({ className = 'w-5 h-5' }: IconProps) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden>
+    <path d="M2.06 12.35a1 1 0 0 1 0-.7C3.42 8.1 7.36 5 12 5s8.58 3.1 9.94 6.65a1 1 0 0 1 0 .7C20.58 15.9 16.64 19 12 19s-8.58-3.1-9.94-6.65Z" />
+    <circle cx="12" cy="12" r="3" />
+  </svg>
+);
+
+export const EyeOffIcon = ({ className = 'w-5 h-5' }: IconProps) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden>
+    <path d="M10.73 5.08A10.9 10.9 0 0 1 12 5c4.64 0 8.58 3.1 9.94 6.65a1 1 0 0 1 0 .7 13.16 13.16 0 0 1-1.67 2.68" />
+    <path d="M6.61 6.61A13.53 13.53 0 0 0 2.06 11.65a1 1 0 0 0 0 .7C3.42 15.9 7.36 19 12 19c1.34 0 2.63-.26 3.8-.72" />
+    <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24" />
+    <path d="m3 3 18 18" />
+  </svg>
+);
+
 export const MailIcon = ({ className = 'w-5 h-5' }: IconProps) => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden>
     <rect x="3" y="5" width="18" height="14" rx="2.5" />

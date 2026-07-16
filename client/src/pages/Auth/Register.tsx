@@ -5,8 +5,9 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { isAxiosError } from 'axios';
 import { authApi } from '../../features/auth/api';
-import { useAuthStore } from '../../features/auth/store';
 import AuthShell from '../../components/layouts/AuthShell';
+import SuccessModal from '../../components/ui/SuccessModal';
+import PasswordInput from '../../components/ui/PasswordInput';
 
 const schema = z
   .object({
@@ -30,8 +31,8 @@ const labelClass = 'block text-[11px] font-bold uppercase tracking-wide text-ink
 
 export default function Register() {
   const navigate = useNavigate();
-  const setAuth = useAuthStore((s) => s.setAuth);
   const [serverError, setServerError] = useState<string | null>(null);
+  const [createdName, setCreatedName] = useState<string | null>(null);
 
   const {
     register,
@@ -42,9 +43,9 @@ export default function Register() {
   const onSubmit = async ({ confirmPassword: _confirmPassword, ...values }: FormValues) => {
     setServerError(null);
     try {
-      const { user, accessToken } = await authApi.register(values);
-      setAuth(user, accessToken);
-      navigate('/dashboard');
+      // No auto-login: the account is created, then the user signs in themselves
+      const { user } = await authApi.register(values);
+      setCreatedName(user.firstName);
     } catch (err) {
       setServerError(
         isAxiosError(err)
@@ -53,6 +54,8 @@ export default function Register() {
       );
     }
   };
+
+  const goToLogin = () => navigate('/login');
 
   return (
     <AuthShell title="Create your account" subtitle="Book flights in minutes — no fees, no fuss.">
@@ -88,14 +91,14 @@ export default function Register() {
         </div>
         <div>
           <label className={labelClass}>Password</label>
-          <input type="password" {...register('password')} className={inputClass} placeholder="Minimum 8 characters" />
+          <PasswordInput {...register('password')} className={inputClass} placeholder="Minimum 8 characters" />
           {errors.password && (
             <p className="text-xs font-medium text-red-600 mt-1.5">{errors.password.message}</p>
           )}
         </div>
         <div>
           <label className={labelClass}>Confirm password</label>
-          <input type="password" {...register('confirmPassword')} className={inputClass} placeholder="Repeat your password" />
+          <PasswordInput {...register('confirmPassword')} className={inputClass} placeholder="Repeat your password" />
           {errors.confirmPassword && (
             <p className="text-xs font-medium text-red-600 mt-1.5">{errors.confirmPassword.message}</p>
           )}
@@ -115,6 +118,25 @@ export default function Register() {
           Sign in
         </Link>
       </p>
+
+      <SuccessModal
+        open={createdName !== null}
+        onClose={goToLogin}
+        title="Account created successfully!"
+        message={
+          <>
+            Welcome to VertixFlights, <span className="font-bold text-ink">{createdName}</span>!
+            Your account is ready — sign in with your email and password to start booking.
+          </>
+        }
+      >
+        <button
+          onClick={goToLogin}
+          className="w-full h-11 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-brand-600 to-violet-glow shadow-soft hover:shadow-lift hover:opacity-95 active:scale-[0.99] transition-all"
+        >
+          Continue to sign in
+        </button>
+      </SuccessModal>
     </AuthShell>
   );
 }

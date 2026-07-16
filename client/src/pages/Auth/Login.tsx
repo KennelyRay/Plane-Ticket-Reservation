@@ -8,6 +8,7 @@ import { authApi } from '../../features/auth/api';
 import { useAuthStore } from '../../features/auth/store';
 import AuthShell from '../../components/layouts/AuthShell';
 import SuccessModal from '../../components/ui/SuccessModal';
+import PasswordInput from '../../components/ui/PasswordInput';
 
 const schema = z.object({
   email: z.string().email('Enter a valid email'),
@@ -67,7 +68,7 @@ export default function Login() {
         </div>
         <div>
           <label className={labelClass}>Password</label>
-          <input type="password" {...register('password')} className={inputClass} placeholder="••••••••" />
+          <PasswordInput {...register('password')} className={inputClass} placeholder="••••••••" />
           {errors.password && (
             <p className="text-xs font-medium text-red-600 mt-1.5">{errors.password.message}</p>
           )}
