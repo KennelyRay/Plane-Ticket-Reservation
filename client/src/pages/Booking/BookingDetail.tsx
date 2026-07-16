@@ -8,7 +8,7 @@ import LockCountdown from '../../components/booking/LockCountdown';
 import BoardingPassCard from '../../components/booking/BoardingPassCard';
 import SuccessModal from '../../components/ui/SuccessModal';
 import { printBoardingPasses } from '../../features/booking/printBoardingPass';
-import { CheckIcon, CheckInIcon, MailIcon, PlaneIcon, PrinterIcon, TicketIcon } from '../../components/ui/icons';
+import { CheckIcon, CheckInIcon, PlaneIcon, PrinterIcon, TicketIcon } from '../../components/ui/icons';
 
 const CHECKIN_OPENS_HOURS_BEFORE = 24;
 
@@ -33,7 +33,6 @@ export default function BookingDetail() {
   const justPaid = Boolean((location.state as { justPaid?: boolean } | null)?.justPaid);
   const [cancelError, setCancelError] = useState<string | null>(null);
   const [showConfirmedModal, setShowConfirmedModal] = useState(justPaid);
-  const [emailedTo, setEmailedTo] = useState<string | null>(null);
 
   const { data: booking, isLoading, isError } = useQuery({
     queryKey: ['booking', bookingId],
@@ -52,21 +51,6 @@ export default function BookingDetail() {
         isAxiosError(err)
           ? err.response?.data?.message ?? 'Check-in failed'
           : 'Check-in failed'
-      );
-    },
-  });
-
-  const emailMutation = useMutation({
-    mutationFn: () => bookingApi.emailBoardingPass(bookingId!),
-    onSuccess: ({ email }) => {
-      setCancelError(null);
-      setEmailedTo(email);
-    },
-    onError: (err) => {
-      setCancelError(
-        isAxiosError(err)
-          ? err.response?.data?.message ?? 'Could not email the boarding pass'
-          : 'Could not email the boarding pass'
       );
     },
   });
@@ -135,11 +119,13 @@ export default function BookingDetail() {
             <span className="font-bold text-ink">
               {flight.route.originAirport.city} → {flight.route.destinationAirport.city}
             </span>
-            . Your reference is{' '}
+            . Your boarding {booking.passengers.length === 1 ? 'pass is' : 'passes are'} ready
+            below and on the way to{' '}
+            <span className="font-bold text-ink">{booking.contactEmail}</span>. Reference:{' '}
             <span className="font-extrabold text-ink tabular-nums">
               {booking.bookingReference}
-            </span>{' '}
-            — keep it handy for check-in.
+            </span>
+            .
           </>
         }
       >
@@ -164,32 +150,6 @@ export default function BookingDetail() {
         </button>
       </SuccessModal>
 
-      <SuccessModal
-        open={emailedTo !== null}
-        onClose={() => setEmailedTo(null)}
-        tone="brand"
-        title="E-boarding pass sent!"
-        message={
-          <>
-            Your e-boarding pass has been sent to your email
-            {emailedTo && (
-              <>
-                {' '}
-                — <span className="font-bold text-ink">{emailedTo}</span>
-              </>
-            )}
-            . Check your inbox before heading to the airport.
-          </>
-        }
-      >
-        <button
-          onClick={() => setEmailedTo(null)}
-          className="w-full h-11 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-brand-600 to-violet-glow shadow-soft hover:shadow-lift hover:opacity-95 active:scale-[0.99] transition-all"
-        >
-          Done
-        </button>
-      </SuccessModal>
-
       <Link
         to="/bookings"
         className="inline-flex items-center gap-1 text-sm font-bold text-brand-600 hover:underline"
@@ -203,9 +163,10 @@ export default function BookingDetail() {
             <CheckIcon className="w-3 h-3" />
           </span>
           <span>
-            Payment successful — booking confirmed! Your reference is{' '}
-            <span className="font-extrabold">{booking.bookingReference}</span> — keep it handy for
-            check-in.
+            Payment successful — booking confirmed! Your boarding{' '}
+            {booking.passengers.length === 1 ? 'pass is' : 'passes are'} below and emailed to{' '}
+            <span className="font-extrabold">{booking.contactEmail}</span>. Reference:{' '}
+            <span className="font-extrabold">{booking.bookingReference}</span>.
           </span>
         </div>
       )}
@@ -366,23 +327,13 @@ export default function BookingDetail() {
                   <CheckInIcon className="w-4 h-4 text-emerald-500" />
                   Boarding passes
                 </h2>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => printBoardingPasses(booking)}
-                    className="h-10 px-4 inline-flex items-center gap-2 rounded-xl text-sm font-bold text-ink border border-slate-200 bg-white hover:border-brand-300 hover:text-brand-700 transition-colors"
-                  >
-                    <PrinterIcon className="w-4 h-4" />
-                    Print
-                  </button>
-                  <button
-                    onClick={() => emailMutation.mutate()}
-                    disabled={emailMutation.isPending}
-                    className="h-10 px-4 inline-flex items-center gap-2 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-brand-600 to-violet-glow shadow-soft hover:shadow-lift hover:opacity-95 active:scale-[0.99] transition-all disabled:opacity-50"
-                  >
-                    <MailIcon className="w-4 h-4" />
-                    {emailMutation.isPending ? 'Sending…' : 'Email boarding pass'}
-                  </button>
-                </div>
+                <button
+                  onClick={() => printBoardingPasses(booking)}
+                  className="h-10 px-4 inline-flex items-center gap-2 rounded-xl text-sm font-bold text-ink border border-slate-200 bg-white hover:border-brand-300 hover:text-brand-700 transition-colors"
+                >
+                  <PrinterIcon className="w-4 h-4" />
+                  Print
+                </button>
               </div>
               {booking.passengers
                 .filter((bp) => bp.ticket?.boardingPass)

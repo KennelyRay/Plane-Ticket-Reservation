@@ -1,5 +1,8 @@
+import { prisma } from '../config/db';
 import { ApiError } from '../utils/ApiError';
 import { bookingRepository } from '../repositories/booking.repository';
+import { ticketService } from './ticket.service';
+import { emailService } from './email.service';
 import { PayBookingInput } from '../validators/payment.validator';
 import { AuthUser } from '../middleware/auth';
 
@@ -37,7 +40,7 @@ export const paymentService = {
       throw ApiError.badRequest('Payment declined by the card issuer — try a different card');
     }
 
-    return bookingRepository.confirmWithPayment(booking.id, {
+    const confirmed = await bookingRepository.confirmWithPayment(booking.id, {
       amount: booking.totalAmount,
       method: input.method,
       provider: 'demo',
@@ -45,5 +48,27 @@ export const paymentService = {
       status: 'PAID',
       paidAt: new Date(),
     });
+
+    // The payment has settled — pass issuance/email problems must not fail
+    // the request, so this block only logs on error.
+    try {
+      await ticketService.issueTicketsWithPasses(confirmed);
+      const withTickets = (await bookingRepository.findById(confirmed.id))!;
+
+      if (emailService.isConfigured) await emailService.sendBoardingPass(withTickets);
+      const route = `${withTickets.flight.route.originAirport.iataCode} → ${withTickets.flight.route.destinationAirport.iataCode}`;
+      await prisma.notification.create({
+        data: {
+          userId: withTickets.userId,
+          type: 'BOARDING_REMINDER',
+          title: 'Your e-boarding pass',
+          message: `Your e-boarding pass for ${route} (${withTickets.flight.flightNumber}) has been sent to ${withTickets.contactEmail}.`,
+        },
+      });
+      return withTickets;
+    } catch (err) {
+      console.error('Post-payment boarding pass issue/email failed:', err);
+      return (await bookingRepository.findById(confirmed.id)) ?? confirmed;
+    }
   },
 };
