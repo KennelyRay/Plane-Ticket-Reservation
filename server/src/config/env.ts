@@ -25,4 +25,11 @@ export const env = {
     refreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN ?? '7d',
   },
   redisUrl: process.env.REDIS_URL || null,
+  mail: {
+    // Optional: without a key, boarding-pass emails degrade to in-app notifications only
+    resendApiKey: process.env.RESEND_API_KEY || null,
+    // Resend's shared onboarding sender works out of the box; set MAIL_FROM to a
+    // verified-domain address (e.g. "VertixFlights <boarding@yourdomain.com>") in prod
+    from: process.env.MAIL_FROM || 'VertixFlights <onboarding@resend.dev>',
+  },
 };

@@ -1,6 +1,7 @@
 import { prisma } from '../config/db';
 import { ApiError } from '../utils/ApiError';
 import { bookingRepository } from '../repositories/booking.repository';
+import { emailService } from './email.service';
 import { AuthUser } from '../middleware/auth';
 
 export const CHECKIN_OPENS_HOURS_BEFORE = 24;
@@ -86,9 +87,9 @@ export const checkinService = {
   },
 
   /**
-   * "Emails" the e-boarding pass to the booking's contact address. No SMTP is
-   * wired up in this demo, so we record a notification to represent the send and
-   * return the address the pass went to.
+   * Emails the e-boarding pass to the booking's contact address via Resend.
+   * Without a RESEND_API_KEY the send is skipped and only the in-app
+   * notification records it (keeps the demo flow working key-less).
    */
   async emailBoardingPass(bookingId: string, user: AuthUser) {
     const booking = await bookingRepository.findById(bookingId);
@@ -101,6 +102,9 @@ export const checkinService = {
     if (!issued)
       throw ApiError.badRequest('Check in first — your boarding pass has not been issued yet');
 
+    const delivered = emailService.isConfigured;
+    if (delivered) await emailService.sendBoardingPass(booking);
+
     const route = `${booking.flight.route.originAirport.iataCode} → ${booking.flight.route.destinationAirport.iataCode}`;
     await prisma.notification.create({
       data: {
@@ -111,6 +115,6 @@ export const checkinService = {
       },
     });
 
-    return { email: booking.contactEmail };
+    return { email: booking.contactEmail, delivered };
   },
 };
