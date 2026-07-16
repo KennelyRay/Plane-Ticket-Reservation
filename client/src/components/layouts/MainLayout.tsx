@@ -5,6 +5,7 @@ import { authApi } from '../../features/auth/api';
 import { LogoMark, PlaneIcon } from '../ui/icons';
 import SuccessModal from '../ui/SuccessModal';
 import MobileNav from './MobileNav';
+import SessionTimeoutGuard from './SessionTimeoutGuard';
 
 /** Ambient site-wide backdrop: drifting aurora blobs + passing planes. */
 function BackgroundScene() {
@@ -183,6 +184,7 @@ export default function MainLayout() {
       </SuccessModal>
 
       <MobileNav user={user} onLogout={handleLogout} />
+      <SessionTimeoutGuard />
     </div>
   );
 }
